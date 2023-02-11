@@ -1,41 +1,42 @@
 import express, { Request, Response } from 'express';
+import Message from '../schemas/Message';
 import Chat from '../schemas/Chat';
 import User from '../schemas/User';
-import Message from '../schemas/Message';
 
 class MessageController {
   async sendMessage(req: Request, res: Response) {
     try {
-      const { from, messageText, chatId } = req.body;
+      const { from, to, messageText, chatId } = req.body;
+      const newMessage = await Message.create({ messageText, from });
 
-      const newMessage = await Message.create({ messageText, from, chatId });
-      console.log(newMessage);
+      if (!chatId) {
+        const newChat = await Chat.create({ members: [from, to], messages: [newMessage], lastMessage: newMessage });
+        console.log(newChat);
 
-      if (!newMessage) {
-        throw Error('Non new message');
+        const users = await User.updateMany(
+          { _id: { $in: [from, to] } },
+          { $addToSet: { chats: newChat._id } },
+          { new: true }
+        );
+        console.log(users);
+
+        return res.status(200).json(newChat);
+      } else {
+        const chat = await Chat.findById(chatId);
+        if (chat) {
+          const { messages } = chat;
+          const updatedChat = await Chat.findByIdAndUpdate(
+            chatId,
+            { messages: [...messages, newMessage], lastMessage: newMessage },
+            { new: true }
+          );
+          console.log(updatedChat);
+          return res.status(200).json(updatedChat);
+        }
       }
-      const unpdatedChat = await Chat.findByIdAndUpdate(chatId, { lastMessage: newMessage }, { new: true });
-      return res.status(200).json(unpdatedChat);
     } catch (error) {
       return res.status(500).json(error);
     }
-  }
-
-  async getMessagesFromChat(req: Request, res: Response) {
-    try {
-      const chatId = req.params.chatId;
-      const messages = await Message.find({ chatId });
-
-      return res.status(200).json(messages);
-    } catch (error) {}
-  }
-  async getMessage(req: Request, res: Response) {
-    try {
-      const messageId = req.params.messageId;
-      const message = await Message.findById(messageId);
-
-      return res.status(200).json(message);
-    } catch (error) {}
   }
 }
 

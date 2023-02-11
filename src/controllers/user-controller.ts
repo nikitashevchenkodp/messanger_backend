@@ -14,7 +14,11 @@ class UserController {
 
   async login(req: Request, res: Response) {
     try {
-      return res.status(200);
+      const { email } = req.body;
+      const user = await User.find({ email });
+      if (user) {
+        return res.status(200).json(user[0]);
+      }
     } catch (error) {
       console.log(error);
     }

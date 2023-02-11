@@ -9,11 +9,11 @@ export interface IMessage {
 }
 
 export interface IChat {
-  _id: Types.ObjectId;
+  chatId: Types.ObjectId;
   members: Array<string>;
+  messages: Array<IMessage>;
   lastMessage: IMessage;
 }
-
 export interface IUser {
   fullName: string;
   email: string;
