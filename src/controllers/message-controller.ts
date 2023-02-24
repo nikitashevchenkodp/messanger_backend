@@ -7,20 +7,18 @@ class MessageController {
   async sendMessage(req: Request, res: Response) {
     try {
       const { from, to, messageText, chatId } = req.body;
-      const newMessage = await Message.create({ messageText, from });
+      console.log(req.body);
+
+      const newMessage = await Message.create({ messageText, from, to });
 
       if (!chatId) {
         const newChat = await Chat.create({ members: [from, to], messages: [newMessage], lastMessage: newMessage });
-        console.log(newChat);
 
         const users = await User.updateMany(
           { _id: { $in: [from, to] } },
           { $addToSet: { chats: newChat._id } },
           { new: true }
         );
-        console.log(users);
-
-        return res.status(200).json(newChat);
       } else {
         const chat = await Chat.findById(chatId);
         if (chat) {
@@ -30,8 +28,7 @@ class MessageController {
             { messages: [...messages, newMessage], lastMessage: newMessage },
             { new: true }
           );
-          console.log(updatedChat);
-          return res.status(200).json(updatedChat);
+          return res.status(200).json(newMessage);
         }
       }
     } catch (error) {

@@ -36,7 +36,6 @@ class ChatsController {
     try {
       const currentUserId = req.headers.authorization;
       const currentUser = await User.findById(currentUserId);
-      console.log(currentUser);
 
       if (!currentUser) {
         throw new Error('not such user');
@@ -46,15 +45,19 @@ class ChatsController {
 
       const result = await Promise.all(
         records.map(async (chat) => {
-          console.log('chat Members', chat.members);
-
           const friendId = chat.members.filter(
             (member: any) => member._id.toString() !== currentUser._id.toString()
           )[0];
           const from = await User.findById(friendId);
           const lastMessage = chat.messages[chat.messages.length - 1];
           const { _id } = chat;
-          return { chatId: _id, withWhomChat: from?.fullName, withWhomAvatar: from?.avatar, lastMessage };
+          return {
+            chatId: _id,
+            withWhomChat: from?.fullName,
+            withWhomId: from?._id,
+            withWhomAvatar: from?.avatar,
+            lastMessage,
+          };
         })
       );
 

@@ -27,10 +27,8 @@ class UserController {
   async getUser(req: Request, res: Response) {
     try {
       const id = req.params.userId;
-      console.log(id);
 
       const user = await User.findById(id);
-      console.log(user);
 
       return res.status(200).json(user);
     } catch (error) {

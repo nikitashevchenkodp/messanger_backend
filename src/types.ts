@@ -5,6 +5,7 @@ export interface IMessage {
   messageText: string;
   createdAt: Date;
   from: Types.ObjectId;
+  to: Types.ObjectId;
   chatId: Types.ObjectId;
 }
 
