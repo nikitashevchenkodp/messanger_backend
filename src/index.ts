@@ -3,7 +3,6 @@ import express, { Express, Request, Response } from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
 import { chatsRouter, messageRouter, userRouter } from './routes';
-import { Server } from 'socket.io';
 import { ServerSocket } from './socket';
 
 mongoose.set('strictQuery', false);

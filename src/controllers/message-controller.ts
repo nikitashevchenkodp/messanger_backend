@@ -2,36 +2,29 @@ import express, { Request, Response } from 'express';
 import Message from '../schemas/Message';
 import Chat from '../schemas/Chat';
 import User from '../schemas/User';
+import { IChat, IMessage, IMessageFromClient } from '../types';
+import { messageService } from '../services/message-service';
+import { chatService } from '../services/chat-service';
 
 class MessageController {
   async sendMessage(req: Request, res: Response) {
+    console.log('work');
+
     try {
       const { from, to, messageText, chatId } = req.body;
-      console.log(req.body);
-
-      const newMessage = await Message.create({ messageText, from, to });
+      let chat = null;
 
       if (!chatId) {
-        const newChat = await Chat.create({ members: [from, to], messages: [newMessage], lastMessage: newMessage });
-
-        const users = await User.updateMany(
-          { _id: { $in: [from, to] } },
-          { $addToSet: { chats: newChat._id } },
-          { new: true }
-        );
-      } else {
-        const chat = await Chat.findById(chatId);
-        if (chat) {
-          const { messages } = chat;
-          const updatedChat = await Chat.findByIdAndUpdate(
-            chatId,
-            { messages: [...messages, newMessage], lastMessage: newMessage },
-            { new: true }
-          );
-          return res.status(200).json(newMessage);
-        }
+        chat = await chatService.createChat(from, to);
       }
+
+      const newMessage = await messageService.createMessage(from, to, messageText, chat ? chat._id : chatId);
+      await messageService.saveMessage(chat ? chat._id : chatId, newMessage);
+
+      return res.status(201).json(newMessage);
     } catch (error) {
+      console.log(error);
+
       return res.status(500).json(error);
     }
   }

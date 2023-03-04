@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import Chat from '../schemas/Chat';
 import User from '../schemas/User';
 import Message from '../schemas/Message';
+import MessagesMap from '../schemas/MessagesMap';
 
 class ChatsController {
   // async addChat(req: Request, res: Response) {
@@ -25,9 +26,9 @@ class ChatsController {
   async getChatMessages(req: Request, res: Response) {
     try {
       const chatId = req.params.chatId;
-      const chat = await Chat.findById(chatId);
-      if (chat) {
-        return res.status(200).json(chat.messages);
+      const messagesMap = await MessagesMap.findById(chatId);
+      if (messagesMap) {
+        return res.status(200).json(messagesMap.messages);
       }
     } catch (error) {}
   }
@@ -45,18 +46,21 @@ class ChatsController {
 
       const result = await Promise.all(
         records.map(async (chat) => {
-          const friendId = chat.members.filter(
-            (member: any) => member._id.toString() !== currentUser._id.toString()
-          )[0];
-          const from = await User.findById(friendId);
-          const lastMessage = chat.messages[chat.messages.length - 1];
+          const friendId = chat.members.find((member: any) => member._id.toString() !== currentUser._id.toString());
+          const partner = await User.findById(friendId);
+          const chatMessages = await MessagesMap.findById(chat._id);
+          let lastMessage;
+          if (chatMessages) {
+            const { messages } = chatMessages;
+            lastMessage = messages[messages.length - 1];
+          }
           const { _id } = chat;
           return {
-            chatId: _id,
-            withWhomChat: from?.fullName,
-            withWhomId: from?._id,
-            withWhomAvatar: from?.avatar,
-            lastMessage,
+            chatId: _id.toString(),
+            partnerFullName: partner?.fullName || '',
+            partnerId: partner?._id || '',
+            partnerAvatar: partner?.avatar || '',
+            lastMessage: lastMessage || {},
           };
         })
       );

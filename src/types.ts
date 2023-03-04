@@ -10,6 +10,7 @@ export interface IMessage {
 }
 
 export interface IChat {
+  _id: Types.ObjectId;
   chatId: Types.ObjectId;
   members: Array<string>;
   messages: Array<IMessage>;
@@ -21,4 +22,11 @@ export interface IUser {
   password: string;
   avatar: string;
   chats: Array<IChat>;
+}
+
+export interface IMessageFromClient {
+  from: string;
+  to: string;
+  messageText: string;
+  chatId: string;
 }

@@ -65,8 +65,8 @@ class UserController {
 
   async getAllUsers(req: Request, res: Response) {
     try {
-      const allChats = await User.find();
-      return res.status(200).json(allChats);
+      const allUsers = await User.find();
+      return res.status(200).json(allUsers);
     } catch (error) {
       console.log(error);
     }
