@@ -1,13 +1,14 @@
 import { Server as HttpServer } from 'http';
 import { Socket, Server } from 'socket.io';
-import { v4 } from 'uuid';
+import User from './schemas/User';
+import { IChat } from './types';
 
 export class ServerSocket {
   public static instance: ServerSocket;
   public io: Server;
+  public users: Record<string, string>;
 
   /** Master list of all connected users */
-  public users: { [uid: string]: string };
 
   constructor(server: HttpServer) {
     ServerSocket.instance = this;
@@ -22,71 +23,41 @@ export class ServerSocket {
       },
     });
 
-    this.io.on('connect', this.StartListeners);
+    this.io.on('connection', this.StartListeners);
   }
 
-  StartListeners = (socket: Socket) => {
-    console.info('Message received from ' + socket.id);
+  StartListeners = async (socket: Socket) => {
+    console.log('------------------------------------');
+    console.info('Connect received from: ' + socket.id);
+    console.log('------------------------------------');
+    const userId = socket.handshake.query.id as string;
+    this.users[socket.id] = userId;
+    console.log(this.users);
+    const connectedUser = await User.findById(userId);
 
-    socket.on('handshake', (callback: (uid: string, users: string[]) => void) => {
-      console.info('Handshake received from: ' + socket.id);
-
-      const reconnected = Object.values(this.users).includes(socket.id);
-
-      if (reconnected) {
-        console.info('This user has reconnected.');
-
-        const uid = this.GetUidFromSocketID(socket.id);
-        const users = Object.values(this.users);
-
-        if (uid) {
-          console.info('Sending callback for reconnect ...');
-          callback(uid, users);
-          return;
-        }
-      }
-
-      const uid = v4();
-      this.users[uid] = socket.id;
-
-      const users = Object.values(this.users);
-      console.info('Sending callback ...');
-      callback(uid, users);
-
-      this.SendMessage(
-        'user_connected',
-        users.filter((id) => id !== socket.id),
-        users
-      );
-    });
+    if (connectedUser) {
+      connectedUser.chats.forEach(async (chat: IChat) => {
+        const roomName = chat._id.valueOf() as string;
+        socket.join(roomName);
+      });
+    }
 
     socket.on('sendMessage', (message) => {
-      console.log('message');
-      const users = Object.values(this.users);
-      this.SendMessage('recMsg', users, message);
+      this.io.to(message.chatId).emit('recMsg', message);
+    });
+
+    socket.on('typing', (data) => {
+      const userId = this.users[socket.id];
+      const { chatId, status } = data;
+      this.io.to(chatId).emit('typing', { userId, status });
     });
 
     socket.on('disconnect', () => {
+      console.log('------------------------------------');
       console.info('Disconnect received from: ' + socket.id);
-
-      const uid = this.GetUidFromSocketID(socket.id);
-
-      if (uid) {
-        delete this.users[uid];
-
-        const users = Object.values(this.users);
-
-        this.SendMessage('user_disconnected', users, socket.id);
-      }
+      console.log('------------------------------------');
+      delete this.users[socket.id];
+      console.log(this.users);
     });
-  };
-
-  GetUidFromSocketID = (id: string) => {
-    return Object.keys(this.users).find((uid) => this.users[uid] === id);
-  };
-
-  SendMessage = (name: string, users: string[], payload?: Object) => {
-    console.info('Emitting event: ' + name + ' to', users);
-    users.forEach((id) => (payload ? this.io.to(id).emit(name, payload) : this.io.to(id).emit(name)));
   };
 }
