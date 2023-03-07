@@ -8,8 +8,12 @@ import { ServerSocket } from './socket';
 mongoose.set('strictQuery', false);
 
 const app: Express = express();
-const port = process.env.APP_PORT || 5003;
-app.use(cors());
+const port = 5002;
+app.use(
+  cors({
+    origin: '*',
+  })
+);
 app.use(express.json());
 app.use('/api/users', userRouter);
 app.use('/api/chats', chatsRouter);
@@ -17,6 +21,6 @@ app.use('/api/messages', messageRouter);
 
 mongoose.connect(process.env.DB_URL!);
 
-const server = app.listen(port, () => console.log('success'));
+const server = app.listen(port, '192.168.0.10', () => console.log('success'));
 
 new ServerSocket(server);

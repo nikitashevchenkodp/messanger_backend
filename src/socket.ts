@@ -32,15 +32,15 @@ export class ServerSocket {
     console.log('------------------------------------');
     const userId = socket.handshake.query.id as string;
     this.users[socket.id] = userId;
-    console.log(this.users);
     const connectedUser = await User.findById(userId);
-
     if (connectedUser) {
       connectedUser.chats.forEach(async (chat: IChat) => {
         const roomName = chat._id.valueOf() as string;
         socket.join(roomName);
       });
     }
+    const onlineUsers = Array.from(new Set(Object.values(this.users)));
+    this.io.emit('online', onlineUsers);
 
     socket.on('sendMessage', (message) => {
       this.io.to(message.chatId).emit('recMsg', message);
@@ -48,8 +48,8 @@ export class ServerSocket {
 
     socket.on('typing', (data) => {
       const userId = this.users[socket.id];
-      const { chatId, status } = data;
-      this.io.to(chatId).emit('typing', { userId, status });
+      const { chatId, typing } = data;
+      this.io.to(chatId).emit('typing', { userId, typing });
     });
 
     socket.on('disconnect', () => {
@@ -57,7 +57,8 @@ export class ServerSocket {
       console.info('Disconnect received from: ' + socket.id);
       console.log('------------------------------------');
       delete this.users[socket.id];
-      console.log(this.users);
+      const onlineUsers = Array.from(new Set(Object.values(this.users)));
+      this.io.emit('online', onlineUsers);
     });
   };
 }
