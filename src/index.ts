@@ -4,6 +4,7 @@ import cors from 'cors';
 import mongoose from 'mongoose';
 import { chatsRouter, messageRouter, userRouter } from './routes';
 import { ServerSocket } from './socket';
+import Chat from './schemas/Chat';
 
 mongoose.set('strictQuery', false);
 

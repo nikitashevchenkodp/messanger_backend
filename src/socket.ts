@@ -27,6 +27,13 @@ export class ServerSocket {
   }
 
   StartListeners = async (socket: Socket) => {
+    await this.connect(socket);
+    socket.on('sendMessage', this.sendMessage);
+    socket.on('typing', (data) => this.typing(data, socket));
+    socket.on('disconnect', () => this.disconnect(socket));
+  };
+
+  connect = async (socket: Socket) => {
     console.log('------------------------------------');
     console.info('Connect received from: ' + socket.id);
     console.log('------------------------------------');
@@ -41,24 +48,24 @@ export class ServerSocket {
     }
     const onlineUsers = Array.from(new Set(Object.values(this.users)));
     this.io.emit('online', onlineUsers);
+  };
 
-    socket.on('sendMessage', (message) => {
-      this.io.to(message.chatId).emit('recMsg', message);
-    });
+  sendMessage = (message: any) => {
+    this.io.to(message.chatId).emit('recMsg', message);
+  };
 
-    socket.on('typing', (data) => {
-      const userId = this.users[socket.id];
-      const { chatId, typing } = data;
-      this.io.to(chatId).emit('typing', { userId, typing });
-    });
+  typing = (data: any, socket: Socket) => {
+    const userId = this.users[socket.id];
+    const { chatId, typing } = data;
+    this.io.to(chatId).emit('typing', { userId, typing });
+  };
 
-    socket.on('disconnect', () => {
-      console.log('------------------------------------');
-      console.info('Disconnect received from: ' + socket.id);
-      console.log('------------------------------------');
-      delete this.users[socket.id];
-      const onlineUsers = Array.from(new Set(Object.values(this.users)));
-      this.io.emit('online', onlineUsers);
-    });
+  disconnect = (socket: Socket) => {
+    console.log('------------------------------------');
+    console.info('Disconnect received from: ' + socket.id);
+    console.log('------------------------------------');
+    delete this.users[socket.id];
+    const onlineUsers = Array.from(new Set(Object.values(this.users)));
+    this.io.emit('online', onlineUsers);
   };
 }
