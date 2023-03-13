@@ -28,7 +28,7 @@ export class ServerSocket {
 
   StartListeners = async (socket: Socket) => {
     await this.connect(socket);
-    socket.on('sendMessage', this.sendMessage);
+    socket.on('sendMessage', (message) => this.sendMessage(message, socket));
     socket.on('typing', (data) => this.typing(data, socket));
     socket.on('disconnect', () => this.disconnect(socket));
   };
@@ -50,7 +50,11 @@ export class ServerSocket {
     this.io.emit('online', onlineUsers);
   };
 
-  sendMessage = (message: any) => {
+  sendMessage = (message: any, socket: Socket) => {
+    const room = this.io.sockets.adapter.rooms.get(message.chatId);
+    if (!room) {
+      socket.join(message.chatId);
+    }
     this.io.to(message.chatId).emit('recMsg', message);
   };
 
