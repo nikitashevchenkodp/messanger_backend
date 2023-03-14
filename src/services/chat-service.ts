@@ -6,6 +6,7 @@ import { IChat, IMessage } from '../types';
 class ChatService {
   createChat = async (from: string, to: string) => {
     console.log('createChat');
+    console.log(from, to);
 
     const newChat = await Chat.create({ members: [from, to] });
     console.log(newChat);

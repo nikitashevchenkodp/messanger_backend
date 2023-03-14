@@ -43,7 +43,6 @@ class ChatsController {
       }
       //find all user chats
       const records = await Chat.find({ _id: { $in: currentUser.chats } });
-
       const result = await Promise.all(
         records.map(async (chat) => {
           const friendId = chat.members.find((member: any) => member._id.toString() !== currentUser._id.toString());
@@ -57,9 +56,11 @@ class ChatsController {
           const { _id } = chat;
           return {
             chatId: _id.toString(),
-            partnerFullName: partner?.fullName || '',
-            partnerId: partner?._id || '',
-            partnerAvatar: partner?.avatar || '',
+            user: {
+              fullName: partner?.fullName || '',
+              id: partner?._id || '',
+              avatar: partner?.avatar || '',
+            },
             lastMessage: lastMessage || {},
           };
         })

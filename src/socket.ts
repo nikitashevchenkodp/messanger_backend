@@ -1,7 +1,25 @@
 import { Server as HttpServer } from 'http';
 import { Socket, Server } from 'socket.io';
+import Chat from './schemas/Chat';
 import User from './schemas/User';
+import { chatService } from './services/chat-service';
+import { messageService } from './services/message-service';
 import { IChat } from './types';
+
+const sendMessage = async (message: { from: string; to: string; chatId: string; messageText: string }) => {
+  const { from, to, messageText, chatId } = message;
+  let chat;
+  if (!chatId) {
+    chat = await chatService.createChat(from, to);
+  } else {
+    chat = await Chat.findById(chatId);
+  }
+
+  const newMessage = await messageService.createMessage(from, to, messageText, chat ? chat._id.toString() : chatId);
+  await messageService.saveMessage(chat ? chat._id.toString() : chatId, newMessage);
+
+  return newMessage;
+};
 
 export class ServerSocket {
   public static instance: ServerSocket;
@@ -50,12 +68,18 @@ export class ServerSocket {
     this.io.emit('online', onlineUsers);
   };
 
-  sendMessage = (message: any, socket: Socket) => {
-    const room = this.io.sockets.adapter.rooms.get(message.chatId);
+  sendMessage = async (message: any, socket: Socket) => {
+    const createdMessage = await sendMessage(message);
+    const room = this.io.sockets.adapter.rooms.get(createdMessage.chatId.toString());
     if (!room) {
-      socket.join(message.chatId);
+      socket.join(createdMessage.chatId.toString());
     }
-    this.io.to(message.chatId).emit('recMsg', message);
+    if (!message.chatId) {
+      const socketId = Object.entries(this.users).find((user) => user[1] === message.to)?.[0] || '';
+      this.io.to(socketId).emit('messageFromNewContact');
+      this.io.to(socket.id).emit('newChatCreated', createdMessage.chatId);
+    }
+    this.io.to(message.chatId).emit('recMsg', createdMessage);
   };
 
   typing = (data: any, socket: Socket) => {

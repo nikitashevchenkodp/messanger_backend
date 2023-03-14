@@ -64,9 +64,18 @@ class UserController {
   async addMessage(req: Request, res: Response) {}
 
   async getAllUsers(req: Request, res: Response) {
+    const currentUserId = req.headers.authorization;
+
     try {
-      const allUsers = await User.find();
-      return res.status(200).json(allUsers);
+      const allUsers = await User.find({ _id: { $ne: currentUserId } });
+
+      const userListWithChatsId = await Promise.all(
+        allUsers.map(async (user) => {
+          const chat = await Chat.findOne({ members: [user._id, currentUserId].sort() });
+          return { id: user._id, fullName: user.fullName, avatar: user.avatar, chatId: chat ? chat._id : '' };
+        })
+      );
+      return res.status(200).json(userListWithChatsId);
     } catch (error) {
       console.log(error);
     }
