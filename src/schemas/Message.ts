@@ -3,7 +3,7 @@ import { IMessage } from '../types';
 
 const MessageSchema = new Schema<IMessage>(
   {
-    messageText: {
+    text: {
       type: String,
     },
     createdAt: {

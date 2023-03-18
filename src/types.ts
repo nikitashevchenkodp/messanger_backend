@@ -2,7 +2,7 @@ import { Types } from 'mongoose';
 
 export interface IMessage {
   _id: Types.ObjectId;
-  messageText: string;
+  text: string;
   createdAt: Date;
   from: Types.ObjectId;
   to: Types.ObjectId;

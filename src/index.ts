@@ -23,6 +23,15 @@ app.use('/api/messages', messageRouter);
 
 mongoose.connect(process.env.DB_URL!);
 
-const server = app.listen(port, () => console.log('success'));
+const connection = async () => {
+  try {
+    await mongoose.connect(process.env.DB_URL!);
+    console.log('connected to db');
+    const server = app.listen(port, () => console.log('success'));
+    new ServerSocket(server);
+  } catch (e) {
+    console.log(e);
+  }
+};
 
-new ServerSocket(server);
+connection();

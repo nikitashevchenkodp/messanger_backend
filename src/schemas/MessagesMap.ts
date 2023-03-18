@@ -9,12 +9,15 @@ const MessagesMapSchema = new Schema<IMessagesMap>({
   messages: {
     type: [
       {
-        messageText: { type: String },
+        text: { type: String },
         createdAt: {
           type: Date,
           default: new Date(),
         },
         from: {
+          type: mongoose.Schema.Types.ObjectId,
+        },
+        chatId: {
           type: mongoose.Schema.Types.ObjectId,
         },
       },

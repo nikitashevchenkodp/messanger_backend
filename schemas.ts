@@ -19,6 +19,8 @@ type User = {
   session: Session[];
 };
 
+type Attachment = 'img' | 'video';
+
 type Message = {
   id: string;
   from: string;
@@ -27,15 +29,10 @@ type Message = {
   chatId: string;
   createdAt: Date;
   delivered: boolean;
-  readed: boolean;
+  unreaded: boolean;
   edited: boolean;
   attachment?: {
-    media?: {
-      audios?: string[];
-      imgs?: string[];
-      videos?: string[];
-    };
-    files?: [];
+    media: [{ type: Attachment; src: string }];
   };
 };
 

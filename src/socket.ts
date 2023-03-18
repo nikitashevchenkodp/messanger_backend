@@ -5,9 +5,9 @@ import User from './schemas/User';
 import { chatService } from './services/chat-service';
 import { messageService } from './services/message-service';
 import { IChat } from './types';
-
-const sendMessage = async (message: { from: string; to: string; chatId: string; messageText: string }) => {
-  const { from, to, messageText, chatId } = message;
+import * as events from './events';
+const sendMessage = async (message: { from: string; to: string; chatId: string; text: string }) => {
+  const { from, to, text, chatId } = message;
   let chat;
   if (!chatId) {
     chat = await chatService.createChat(from, to);
@@ -15,7 +15,7 @@ const sendMessage = async (message: { from: string; to: string; chatId: string; 
     chat = await Chat.findById(chatId);
   }
 
-  const newMessage = await messageService.createMessage(from, to, messageText, chat ? chat._id.toString() : chatId);
+  const newMessage = await messageService.createMessage(from, to, text, chat ? chat._id.toString() : chatId);
   await messageService.saveMessage(chat ? chat._id.toString() : chatId, newMessage);
 
   return newMessage;
@@ -41,14 +41,15 @@ export class ServerSocket {
       },
     });
 
-    this.io.on('connection', this.StartListeners);
+    this.io.on(events.CONNECTION, this.StartListeners);
   }
 
   StartListeners = async (socket: Socket) => {
     await this.connect(socket);
-    socket.on('sendMessage', (message) => this.sendMessage(message, socket));
-    socket.on('typing', (data) => this.typing(data, socket));
-    socket.on('disconnect', () => this.disconnect(socket));
+    socket.on(events.REQUEST_MESSAGE, (message) => this.messageRecieved(message, socket));
+    socket.on(events.TYPING_ON, (data) => this.typing(data, socket));
+    socket.on(events.DISCONECTED, () => this.disconnect(socket));
+    socket.on('deleteMessage', (data) => this.deleteMessage(data, socket));
   };
 
   connect = async (socket: Socket) => {
@@ -65,10 +66,12 @@ export class ServerSocket {
       });
     }
     const onlineUsers = Array.from(new Set(Object.values(this.users)));
-    this.io.emit('online', onlineUsers);
+    this.io.emit(events.ONLINE_USERS, onlineUsers);
   };
 
-  sendMessage = async (message: any, socket: Socket) => {
+  messageRecieved = async (message: any, socket: Socket) => {
+    console.log(message);
+
     const createdMessage = await sendMessage(message);
     const room = this.io.sockets.adapter.rooms.get(createdMessage.chatId.toString());
     if (!room) {
@@ -76,16 +79,20 @@ export class ServerSocket {
     }
     if (!message.chatId) {
       const socketId = Object.entries(this.users).find((user) => user[1] === message.to)?.[0] || '';
-      this.io.to(socketId).emit('messageFromNewContact');
-      this.io.to(socket.id).emit('newChatCreated', createdMessage.chatId);
+      this.io.to(socketId).emit(events.MESSAGE_FROM_NEW_CONTACT);
+      this.io.to(socket.id).emit(events.NEW_CHAT_CREATED, createdMessage.chatId);
     }
-    this.io.to(message.chatId).emit('recMsg', createdMessage);
+    this.io.to(message.chatId).emit(events.RESPONSE_MESSAGE, createdMessage);
   };
 
   typing = (data: any, socket: Socket) => {
     const userId = this.users[socket.id];
     const { chatId, typing } = data;
-    this.io.to(chatId).emit('typing', { userId, typing });
+    this.io.to(chatId).emit(events.TYPING_EMIT, { userId, typing });
+  };
+  deleteMessage = async (data: any, socket: Socket) => {
+    await messageService.deleteMessage(data.message._id);
+    this.io.to(data.message.chatId).emit('messageDeleted', { message: data.message });
   };
 
   disconnect = (socket: Socket) => {
@@ -94,6 +101,6 @@ export class ServerSocket {
     console.log('------------------------------------');
     delete this.users[socket.id];
     const onlineUsers = Array.from(new Set(Object.values(this.users)));
-    this.io.emit('online', onlineUsers);
+    this.io.emit(events.ONLINE_USERS, onlineUsers);
   };
 }

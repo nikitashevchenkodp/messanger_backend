@@ -5,8 +5,9 @@ import MessagesMap from '../schemas/MessagesMap';
 import { IMessage, IMessageFromClient } from '../types';
 
 class MessageService {
-  createMessage = async (from: string, to: string, messageText: string, chatId: string) => {
-    const message = await Message.create({ from, to, messageText, chatId });
+  createMessage = async (from: string, to: string, text: string, chatId: string) => {
+    const message = await Message.create({ from, to, text, chatId });
+    console.log(message);
     return message;
   };
 
@@ -22,7 +23,14 @@ class MessageService {
     await MessagesMap.findByIdAndUpdate(chatId, { $push: { messages: message } });
   };
 
-  deleteMessage = async () => {};
+  deleteMessage = async (id: string) => {
+    try {
+      const deletedMessage = await Message.findOneAndDelete({ _id: id });
+      console.log(deletedMessage);
+    } catch (error) {
+      console.log(error);
+    }
+  };
 
   getMessage = async () => {};
 
