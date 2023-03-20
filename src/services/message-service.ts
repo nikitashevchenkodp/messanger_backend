@@ -3,6 +3,7 @@ import { Types } from 'mongoose';
 import Message from '../schemas/Message';
 import MessagesMap from '../schemas/MessagesMap';
 import { IMessage, IMessageFromClient } from '../types';
+import { chatService } from './chat-service';
 
 class MessageService {
   createMessage = async (from: string, to: string, text: string, chatId: string) => {
@@ -26,7 +27,17 @@ class MessageService {
   deleteMessage = async (id: string) => {
     try {
       const deletedMessage = await Message.findOneAndDelete({ _id: id });
-      console.log(deletedMessage);
+      const allChatMessages = await MessagesMap.findByIdAndUpdate(
+        deletedMessage?.chatId,
+        {
+          $pull: { messages: { _id: deletedMessage?._id } },
+        },
+        { new: true }
+      );
+      if (allChatMessages?.messages.length === 0) {
+        await chatService.deleteChat(deletedMessage?.chatId);
+        await MessagesMap.findByIdAndDelete(deletedMessage?.chatId);
+      }
     } catch (error) {
       console.log(error);
     }

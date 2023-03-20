@@ -18,7 +18,11 @@ class ChatService {
     return newChat;
   };
 
-  deleteChat = async () => {};
+  deleteChat = async (id: any) => {
+    try {
+      await Chat.findByIdAndDelete(id);
+    } catch (error) {}
+  };
 
   getChat = async () => {};
 
