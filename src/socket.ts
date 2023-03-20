@@ -6,20 +6,6 @@ import { chatService } from './services/chat-service';
 import { messageService } from './services/message-service';
 import { IChat } from './types';
 import * as events from './events';
-const sendMessage = async (message: { from: string; to: string; chatId: string; text: string }) => {
-  const { from, to, text, chatId } = message;
-  let chat;
-  if (!chatId) {
-    chat = await chatService.createChat(from, to);
-  } else {
-    chat = await Chat.findById(chatId);
-  }
-
-  const newMessage = await messageService.createMessage(from, to, text, chat ? chat._id.toString() : chatId);
-  await messageService.saveMessage(chat ? chat._id.toString() : chatId, newMessage);
-
-  return newMessage;
-};
 
 export class ServerSocket {
   public static instance: ServerSocket;
@@ -58,9 +44,9 @@ export class ServerSocket {
     console.log('------------------------------------');
     const userId = socket.handshake.query.id as string;
     this.users[socket.id] = userId;
-    const connectedUser = await User.findById(userId);
-    if (connectedUser) {
-      connectedUser.chats.forEach(async (chat: IChat) => {
+    const chats = await chatService.getAllChats(userId);
+    if (chats) {
+      chats.forEach(async (chat: IChat) => {
         const roomName = chat._id.valueOf() as string;
         socket.join(roomName);
       });
@@ -71,8 +57,8 @@ export class ServerSocket {
 
   messageRecieved = async (message: any, socket: Socket) => {
     console.log(message);
-
-    const createdMessage = await sendMessage(message);
+    const { from, to, text, chatId } = message;
+    const createdMessage = await messageService.createMessage(from, to, text, chatId);
     const room = this.io.sockets.adapter.rooms.get(createdMessage.chatId.toString());
     if (!room) {
       socket.join(createdMessage.chatId.toString());

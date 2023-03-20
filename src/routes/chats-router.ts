@@ -4,7 +4,6 @@ import { chatsController } from '../controllers/chat-controller';
 const chatsRouter = Router();
 
 chatsRouter.get('/', chatsController.getAllChats);
-chatsRouter.get('/:chatId', chatsController.getChatMessages);
-// chatsRouter.post('/', chatsController.addChat);
+chatsRouter.get('/:chatId', chatsController.getChat);
 
 export default chatsRouter;

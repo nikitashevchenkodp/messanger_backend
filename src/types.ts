@@ -21,7 +21,6 @@ export interface IUser {
   email: string;
   password: string;
   avatar: string;
-  chats: Array<IChat>;
 }
 
 export interface IMessageFromClient {
