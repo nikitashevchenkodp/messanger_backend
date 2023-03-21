@@ -55,6 +55,8 @@ class ChatService {
   toggleMuteStatus = async (chatId: string, newStatus: boolean) => {};
 
   getChat = async (userId: string, id: string) => {
+    console.log(id);
+    console.log(userId);
     const chat = await Chat.findById(id);
     const friendId = chat?.members.find((member: any) => member._id.toString() !== userId);
     const partner = await User.findById(friendId);
@@ -66,6 +68,7 @@ class ChatService {
         avatar: partner?.avatar || '',
       },
     };
+    return res;
   };
 
   getAllChats = async (userId: string) => {

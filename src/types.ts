@@ -7,6 +7,7 @@ export interface IMessage {
   from: Types.ObjectId;
   to: Types.ObjectId;
   chatId: Types.ObjectId;
+  edited: boolean;
 }
 
 export interface IChat {

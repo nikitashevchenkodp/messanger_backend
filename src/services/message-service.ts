@@ -22,6 +22,14 @@ class MessageService {
       console.log(error);
     }
   };
+  editMessage = async (id: string, text: string) => {
+    try {
+      const editedMessage = await Message.findByIdAndUpdate(id, { text, edited: true }, { new: true });
+      return editedMessage;
+    } catch (error) {
+      console.log(error);
+    }
+  };
 
   getMessagesByChatId = async (chatId: string) => {
     try {

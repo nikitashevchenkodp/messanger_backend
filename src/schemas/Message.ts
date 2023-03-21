@@ -19,6 +19,10 @@ const MessageSchema = new Schema<IMessage>(
     chatId: {
       type: mongoose.Schema.Types.ObjectId,
     },
+    edited: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );

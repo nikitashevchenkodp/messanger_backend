@@ -36,6 +36,8 @@ export class ServerSocket {
     socket.on(events.TYPING_ON, (data) => this.typing(data, socket));
     socket.on(events.DISCONECTED, () => this.disconnect(socket));
     socket.on('deleteMessage', (data) => this.deleteMessage(data, socket));
+    socket.on('editMessage', (data) => this.editMessage(data, socket));
+    socket.on('connectToNewChat', (data) => this.connectToRoom(data, socket));
   };
 
   connect = async (socket: Socket) => {
@@ -62,13 +64,15 @@ export class ServerSocket {
     const room = this.io.sockets.adapter.rooms.get(createdMessage.chatId.toString());
     if (!room) {
       socket.join(createdMessage.chatId.toString());
-    }
-    if (!message.chatId) {
       const socketId = Object.entries(this.users).find((user) => user[1] === message.to)?.[0] || '';
-      this.io.to(socketId).emit(events.MESSAGE_FROM_NEW_CONTACT);
+      this.io.to(socketId).emit(events.MESSAGE_FROM_NEW_CONTACT, createdMessage.chatId);
       this.io.to(socket.id).emit(events.NEW_CHAT_CREATED, createdMessage.chatId);
     }
     this.io.to(message.chatId).emit(events.RESPONSE_MESSAGE, createdMessage);
+  };
+
+  connectToRoom = async (chatId: string, socket: Socket) => {
+    socket.join(chatId);
   };
 
   typing = (data: any, socket: Socket) => {
@@ -79,6 +83,14 @@ export class ServerSocket {
   deleteMessage = async (data: any, socket: Socket) => {
     await messageService.deleteMessage(data.message._id);
     this.io.to(data.message.chatId).emit('messageDeleted', { message: data.message });
+  };
+
+  editMessage = async (data: any, socket: Socket) => {
+    console.log('edit message server', data);
+    const editedMessage = await messageService.editMessage(data.messageId, data.text);
+    console.log('edited message', editedMessage);
+
+    this.io.to(editedMessage!.chatId.toString()).emit('messageEdited', { message: editedMessage });
   };
 
   disconnect = (socket: Socket) => {
