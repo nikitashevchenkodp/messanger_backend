@@ -1,51 +1,44 @@
-import { Document } from 'mongodb';
-import { Types } from 'mongoose';
 import Message from '../schemas/Message';
-import MessagesMap from '../schemas/MessagesMap';
-import { IMessage, IMessageFromClient } from '../types';
 import { chatService } from './chat-service';
 
 class MessageService {
   createMessage = async (from: string, to: string, text: string, chatId: string) => {
-    const message = await Message.create({ from, to, text, chatId });
-    console.log(message);
-    return message;
-  };
-
-  saveMessage = async (
-    chatId: string,
-    //@ts-ignore
-    message: Document<unknown, any, IMessage> &
-      IMessage &
-      Required<{
-        _id: Types.ObjectId;
-      }>
-  ) => {
-    await MessagesMap.findByIdAndUpdate(chatId, { $push: { messages: message } });
+    let chat;
+    if (!chatId) {
+      chat = await chatService.createChat(from, to);
+    }
+    const newMessage = await Message.create({ from, to, text, chatId: chat ? chat._id : chatId });
+    return newMessage;
   };
 
   deleteMessage = async (id: string) => {
     try {
-      const deletedMessage = await Message.findOneAndDelete({ _id: id });
-      const allChatMessages = await MessagesMap.findByIdAndUpdate(
-        deletedMessage?.chatId,
-        {
-          $pull: { messages: { _id: deletedMessage?._id } },
-        },
-        { new: true }
-      );
-      if (allChatMessages?.messages.length === 0) {
-        await chatService.deleteChat(deletedMessage?.chatId);
-        await MessagesMap.findByIdAndDelete(deletedMessage?.chatId);
+      const deletedMessage = await Message.findByIdAndDelete(id);
+      const messagesInThisChat = await this.getMessagesByChatId(deletedMessage?.chatId?.toString()!);
+      if (messagesInThisChat && messagesInThisChat.length === 0) {
+        await chatService.deleteChat(deletedMessage?.chatId?.toString()!);
       }
     } catch (error) {
       console.log(error);
     }
   };
+  editMessage = async (id: string, text: string) => {
+    try {
+      const editedMessage = await Message.findByIdAndUpdate(id, { text, edited: true }, { new: true });
+      return editedMessage;
+    } catch (error) {
+      console.log(error);
+    }
+  };
 
-  getMessage = async () => {};
-
-  getMessagesByChatId = async () => {};
+  getMessagesByChatId = async (chatId: string) => {
+    try {
+      const messages = await Message.find({ chatId });
+      return messages;
+    } catch (error) {
+      console.log(error);
+    }
+  };
 }
 
 export const messageService = new MessageService();

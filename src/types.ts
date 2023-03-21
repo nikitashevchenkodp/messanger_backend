@@ -7,6 +7,7 @@ export interface IMessage {
   from: Types.ObjectId;
   to: Types.ObjectId;
   chatId: Types.ObjectId;
+  edited: boolean;
 }
 
 export interface IChat {
@@ -21,7 +22,6 @@ export interface IUser {
   email: string;
   password: string;
   avatar: string;
-  chats: Array<IChat>;
 }
 
 export interface IMessageFromClient {

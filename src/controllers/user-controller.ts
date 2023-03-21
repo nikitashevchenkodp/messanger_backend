@@ -44,24 +44,6 @@ class UserController {
       return res.status(500).json(error);
     }
   }
-  async addChat(req: Request, res: Response) {
-    try {
-      const members = req.body.members;
-      const newChat = await Chat.create({ members });
-      const currentUserId = req.headers.authorization;
-      const currentUser = await User.findById(currentUserId);
-      if (!currentUser) {
-        throw new Error('not such user');
-      }
-      const newUserChats = [...currentUser.chats, newChat._id];
-      const userWithupdatedChats = await User.findByIdAndUpdate(currentUser, { chats: newUserChats }, { new: true });
-
-      return res.status(200).json({ newChat, userWithupdatedChats });
-    } catch (error) {
-      return res.status(500).json(error);
-    }
-  }
-  async addMessage(req: Request, res: Response) {}
 
   async getAllUsers(req: Request, res: Response) {
     const currentUserId = req.headers.authorization;
