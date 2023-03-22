@@ -30,6 +30,49 @@ class MessageService {
       console.log(error);
     }
   };
+  addReaction = async (messageId: string, newReaction: any) => {
+    try {
+      let messageWithAddedReaction;
+      const targetMessage = await Message.findById(messageId);
+      const userAlreadyMadeReaction = targetMessage?.reactions.find((reaction) => {
+        return reaction.by.id.toString() === newReaction.by.id;
+      });
+      console.log(userAlreadyMadeReaction);
+
+      if (userAlreadyMadeReaction) {
+        console.log('user already made reaction');
+        // delete old reactin
+        const res = await Message.findByIdAndUpdate(
+          messageId,
+          { $pull: { reactions: { 'by.id': userAlreadyMadeReaction.by.id } } },
+          { new: true }
+        );
+      }
+      // Add new reaction
+      messageWithAddedReaction = await Message.findByIdAndUpdate(
+        messageId,
+        { $push: { reactions: newReaction } },
+        { new: true }
+      );
+
+      return messageWithAddedReaction;
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  deleteReaction = async (messageId: string, reactionId: any) => {
+    try {
+      const messageWithDeletedReaction = await Message.findByIdAndUpdate(
+        messageId,
+        { $pull: { reactions: { _id: reactionId } } },
+        { new: true }
+      );
+      return messageWithDeletedReaction;
+    } catch (error) {
+      console.log(error);
+    }
+  };
 
   getMessagesByChatId = async (chatId: string) => {
     try {

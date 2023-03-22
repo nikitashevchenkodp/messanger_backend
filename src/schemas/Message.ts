@@ -23,6 +23,18 @@ const MessageSchema = new Schema<IMessage>(
       type: Boolean,
       default: false,
     },
+    reactions: {
+      type: [
+        {
+          reaction: String,
+          by: {
+            id: mongoose.Schema.Types.ObjectId,
+            avatar: String,
+            fullName: String,
+          },
+        },
+      ],
+    },
   },
   { timestamps: true }
 );

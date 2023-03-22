@@ -8,6 +8,14 @@ export interface IMessage {
   to: Types.ObjectId;
   chatId: Types.ObjectId;
   edited: boolean;
+  reactions: {
+    reaction: string;
+    by: {
+      id: string;
+      avatar: string;
+      fullname: string;
+    };
+  }[];
 }
 
 export interface IChat {
