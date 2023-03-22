@@ -37,6 +37,8 @@ export class ServerSocket {
     socket.on(events.DISCONECTED, () => this.disconnect(socket));
     socket.on('deleteMessage', (data) => this.deleteMessage(data, socket));
     socket.on('editMessage', (data) => this.editMessage(data, socket));
+    socket.on('addReaction', (data) => this.addReaction(data, socket));
+    socket.on('deleteReaction', (data) => this.deleteReaction(data, socket));
     socket.on('connectToNewChat', (data) => this.connectToRoom(data, socket));
   };
 
@@ -91,6 +93,24 @@ export class ServerSocket {
     console.log('edited message', editedMessage);
 
     this.io.to(editedMessage!.chatId.toString()).emit('messageEdited', { message: editedMessage });
+  };
+  addReaction = async (data: any, socket: Socket) => {
+    const messageWithReaction = await messageService.addReaction(data.messageId, data.reaction);
+    this.io.to(data.chatId).emit('reactionAdded', {
+      chatId: data.chatId,
+      messageId: data.messageId,
+      reactions: messageWithReaction?.reactions || [],
+    });
+  };
+  deleteReaction = async (data: any, socket: Socket) => {
+    const messageWithReaction = await messageService.deleteReaction(data.messageId, data.reactionId);
+    console.log(messageWithReaction);
+
+    this.io.to(messageWithReaction?.chatId.toString() || '').emit('reactionDeleted', {
+      chatId: messageWithReaction?.chatId,
+      messageId: data.messageId,
+      reactions: messageWithReaction?.reactions || [],
+    });
   };
 
   disconnect = (socket: Socket) => {
