@@ -35,7 +35,7 @@ export class ServerSocket {
     socket.on(events.REQUEST_MESSAGE, (message) => this.messageRecieved(message, socket));
     socket.on(events.TYPING_ON, (data) => this.typing(data, socket));
     socket.on(events.DISCONECTED, () => this.disconnect(socket));
-    socket.on('deleteMessage', (data) => this.deleteMessage(data, socket));
+    socket.on('deleteMessage', (data) => this.deleteMessages(data, socket));
     socket.on('editMessage', (data) => this.editMessage(data, socket));
     socket.on('addReaction', (data) => this.addReaction(data, socket));
     socket.on('deleteReaction', (data) => this.deleteReaction(data, socket));
@@ -82,9 +82,11 @@ export class ServerSocket {
     const { chatId, typing } = data;
     this.io.to(chatId).emit(events.TYPING_EMIT, { userId, typing });
   };
-  deleteMessage = async (data: any, socket: Socket) => {
-    await messageService.deleteMessage(data.message._id);
-    this.io.to(data.message.chatId).emit('messageDeleted', { message: data.message });
+  deleteMessages = async (data: any, socket: Socket) => {
+    console.log(data);
+
+    await messageService.deleteMessages(data.messagesIds);
+    this.io.to(data.chatId).emit('messageDeleted', { chatId: data.chatId, messagesIds: data.messagesIds });
   };
 
   editMessage = async (data: any, socket: Socket) => {
@@ -95,21 +97,20 @@ export class ServerSocket {
     this.io.to(editedMessage!.chatId.toString()).emit('messageEdited', { message: editedMessage });
   };
   addReaction = async (data: any, socket: Socket) => {
-    const messageWithReaction = await messageService.addReaction(data.messageId, data.reaction);
+    const addedReaction = await messageService.addReaction(data.messageId, data.reaction);
     this.io.to(data.chatId).emit('reactionAdded', {
       chatId: data.chatId,
       messageId: data.messageId,
-      reactions: messageWithReaction?.reactions || [],
+      reaction: addedReaction,
     });
   };
   deleteReaction = async (data: any, socket: Socket) => {
-    const messageWithReaction = await messageService.deleteReaction(data.messageId, data.reactionId);
-    console.log(messageWithReaction);
+    const deletedReactionId = await messageService.deleteReaction(data.messageId, data.reactionId);
 
-    this.io.to(messageWithReaction?.chatId.toString() || '').emit('reactionDeleted', {
-      chatId: messageWithReaction?.chatId,
+    this.io.to(data?.chatId).emit('reactionDeleted', {
+      chatId: data?.chatId,
       messageId: data.messageId,
-      reactions: messageWithReaction?.reactions || [],
+      reactionId: deletedReactionId,
     });
   };
 

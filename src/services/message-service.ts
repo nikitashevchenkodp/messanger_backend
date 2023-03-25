@@ -11,13 +11,17 @@ class MessageService {
     return newMessage;
   };
 
-  deleteMessage = async (id: string) => {
+  deleteMessages = async (ids: string[]) => {
     try {
-      const deletedMessage = await Message.findByIdAndDelete(id);
-      const messagesInThisChat = await this.getMessagesByChatId(deletedMessage?.chatId?.toString()!);
-      if (messagesInThisChat && messagesInThisChat.length === 0) {
-        await chatService.deleteChat(deletedMessage?.chatId?.toString()!);
-      }
+      await Promise.all(
+        ids.map(async (id) => {
+          const deletedMessage = await Message.findByIdAndRemove(id);
+          const messagesInThisChat = await this.getMessagesByChatId(deletedMessage?.chatId?.toString()!);
+          if (messagesInThisChat && messagesInThisChat.length === 0) {
+            await chatService.deleteChat(deletedMessage?.chatId?.toString()!);
+          }
+        })
+      );
     } catch (error) {
       console.log(error);
     }
@@ -54,8 +58,15 @@ class MessageService {
         { $push: { reactions: newReaction } },
         { new: true }
       );
+      console.log(messageWithAddedReaction?.reactions[0]);
+      console.log(newReaction);
 
-      return messageWithAddedReaction;
+      const addedReaction = messageWithAddedReaction?.reactions.find(
+        (reaction) => reaction.by.id.toString() === newReaction.by.id && reaction.reaction === newReaction.reaction
+      );
+      console.log(addedReaction);
+
+      return addedReaction;
     } catch (error) {
       console.log(error);
     }
@@ -68,7 +79,7 @@ class MessageService {
         { $pull: { reactions: { _id: reactionId } } },
         { new: true }
       );
-      return messageWithDeletedReaction;
+      return reactionId;
     } catch (error) {
       console.log(error);
     }
