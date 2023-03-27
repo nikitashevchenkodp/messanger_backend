@@ -61,12 +61,7 @@ class MessageService {
       console.log(messageWithAddedReaction?.reactions[0]);
       console.log(newReaction);
 
-      const addedReaction = messageWithAddedReaction?.reactions.find(
-        (reaction) => reaction.by.id.toString() === newReaction.by.id && reaction.reaction === newReaction.reaction
-      );
-      console.log(addedReaction);
-
-      return addedReaction;
+      return messageWithAddedReaction?.reactions;
     } catch (error) {
       console.log(error);
     }

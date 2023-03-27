@@ -97,11 +97,11 @@ export class ServerSocket {
     this.io.to(editedMessage!.chatId.toString()).emit('messageEdited', { message: editedMessage });
   };
   addReaction = async (data: any, socket: Socket) => {
-    const addedReaction = await messageService.addReaction(data.messageId, data.reaction);
+    const newReactions = await messageService.addReaction(data.messageId, data.reaction);
     this.io.to(data.chatId).emit('reactionAdded', {
       chatId: data.chatId,
       messageId: data.messageId,
-      reaction: addedReaction,
+      reactions: newReactions,
     });
   };
   deleteReaction = async (data: any, socket: Socket) => {
