@@ -30,6 +30,7 @@ export interface IUser {
   email: string;
   password: string;
   avatar: string;
+  nickname: string;
 }
 
 export interface IMessageFromClient {

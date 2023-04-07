@@ -16,9 +16,9 @@ const UserSchema = new Schema<IUser>({
     type: String,
     default: '',
   },
-  chats: {
-    type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Chat' }],
-    default: [],
+  nickname: {
+    type: String,
+    defalt: '',
   },
 });
 

@@ -15,9 +15,9 @@ class UserController {
   async login(req: Request, res: Response) {
     try {
       const { email } = req.body;
-      const user = await User.find({ email });
+      const user = await User.findOne({ email });
       if (user) {
-        return res.status(200).json(user[0]);
+        return res.status(200).json(user);
       }
     } catch (error) {
       console.log(error);
@@ -38,8 +38,12 @@ class UserController {
   async addUser(req: Request, res: Response) {
     try {
       const { fullName, email, password } = req.body;
+      const user = await User.find({ email });
+      if (user) {
+        return res.status(409).json({ message: `User with email "${email}" already exist` });
+      }
       const newUser = await User.create({ fullName, email, password });
-      return res.status(200).json(newUser);
+      return res.status(201).json(newUser);
     } catch (error) {
       return res.status(500).json(error);
     }
