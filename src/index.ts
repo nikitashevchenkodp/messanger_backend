@@ -15,7 +15,7 @@ const port = parseInt(process.env.PORT!);
 const IP = parseInt(process.env.IP!);
 app.use(
   cors({
-    origin: ['https://develop--beamish-custard-7ad3ca.netlify.app'],
+    origin: ['https://beamish-custard-7ad3ca.netlify.app/'],
     credentials: true,
   })
 );
