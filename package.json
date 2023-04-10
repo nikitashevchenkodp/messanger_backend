@@ -3,10 +3,14 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "engines": {
+    "node": "16.x"
+  },
   "scripts": {
     "dev": "concurrently \"npx tsc --watch\" \"nodemon -q ./build/index.js\"",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "npx tsc"
+    "build": "npx tsc",
+    "start": "node ./build/index.js"
   },
   "keywords": [],
   "author": "",
