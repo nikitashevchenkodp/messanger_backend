@@ -11,7 +11,7 @@ import cookieParser from 'cookie-parser';
 mongoose.set('strictQuery', false);
 
 const app: Express = express();
-const port = parseInt(process.env.APP_PORT!);
+const port = parseInt(process.env.PORT!);
 const IP = parseInt(process.env.IP!);
 app.use(
   cors({
@@ -32,7 +32,7 @@ const connection = async () => {
   try {
     await mongoose.connect(process.env.DB_URL!);
     console.log('connected to db');
-    const server = app.listen(port, () => console.log('success'));
+    const server = app.listen(port || 5002, () => console.log('success'));
     new ServerSocket(server);
   } catch (e) {
     console.log(e);
