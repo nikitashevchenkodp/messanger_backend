@@ -4,17 +4,19 @@ import User from '../schemas/User';
 import Message from '../schemas/Message';
 import MessagesMap from '../schemas/MessagesMap';
 import { chatService } from '../services/chat-service';
+import tokenService from '../services/token-service';
 
 class ChatsController {
   async getAllChats(req: Request, res: Response) {
     try {
-      const currentUserId = req.headers.authorization;
+      const token = req.headers.authorization;
+      const user = tokenService.validateAccessToken(token!) as any;
 
       //find all user chats
-      const records = await chatService.getAllChats(currentUserId!);
+      const records = await chatService.getAllChats(user._id);
       const result = await Promise.all(
         records!.map(async (chat) => {
-          const friendId = chat.members.find((member: any) => member._id.toString() !== currentUserId);
+          const friendId = chat.members.find((member: any) => member._id.toString() !== user._id);
           const partner = await User.findById(friendId);
           const { _id } = chat;
           return {
@@ -35,8 +37,9 @@ class ChatsController {
   async getChat(req: Request, res: Response) {
     try {
       const { chatId } = req.params;
-      const userId = req.headers.authorization;
-      const chatItem = await chatService.getChat(userId!, chatId);
+      const token = req.headers.authorization;
+      const user = tokenService.validateAccessToken(token!) as any;
+      const chatItem = await chatService.getChat(user?._id!, chatId);
       res.status(200).json(chatItem);
     } catch (error) {}
   }

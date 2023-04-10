@@ -26,6 +26,7 @@ export interface IChat {
   lastMessage: IMessage;
 }
 export interface IUser {
+  _id: Types.ObjectId;
   fullName: string;
   email: string;
   password: string;

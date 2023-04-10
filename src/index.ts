@@ -5,7 +5,9 @@ import mongoose from 'mongoose';
 import { chatsRouter, messageRouter, userRouter } from './routes';
 import { ServerSocket } from './socket';
 import Chat from './schemas/Chat';
-
+import { errorMiddleware } from './middlewares/error-middleware';
+import authMiddleware from './middlewares/auth-middleware';
+import cookieParser from 'cookie-parser';
 mongoose.set('strictQuery', false);
 
 const app: Express = express();
@@ -13,13 +15,16 @@ const port = parseInt(process.env.APP_PORT!);
 const IP = parseInt(process.env.IP!);
 app.use(
   cors({
-    origin: '*',
+    origin: ['http://localhost:3000'],
+    credentials: true,
   })
 );
 app.use(express.json());
+app.use(cookieParser());
 app.use('/api/users', userRouter);
-app.use('/api/chats', chatsRouter);
-app.use('/api/messages', messageRouter);
+app.use('/api/chats', authMiddleware, chatsRouter);
+app.use('/api/messages', authMiddleware, messageRouter);
+app.use(errorMiddleware);
 
 mongoose.connect(process.env.DB_URL!);
 
