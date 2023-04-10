@@ -15,7 +15,7 @@ const port = parseInt(process.env.PORT!);
 const IP = parseInt(process.env.IP!);
 app.use(
   cors({
-    origin: ['*'],
+    origin: '*',
     credentials: true,
   })
 );
