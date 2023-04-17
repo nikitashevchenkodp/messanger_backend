@@ -19,7 +19,7 @@ class UserController {
     try {
       const { email, password } = req.body;
       const userData = await userService.login(email, password);
-      res.cookie('refreshToken', userData.refreshToken, { maxAge: 30 * 24 * 60 * 60 * 1000, httpOnly: true });
+      res.cookie('refreshToken', userData.refreshToken, { maxAge: 60 * 1000, httpOnly: true });
       return res.json(userData);
     } catch (error) {
       next(error);
@@ -42,7 +42,7 @@ class UserController {
 
       const userData = await userService.createUser(email, password, nickname, fullName);
       if ('refreshToken' in userData) {
-        res.cookie('refreshToken', userData.refreshToken, { maxAge: 30 * 24 * 60 * 60 * 1000, httpOnly: true });
+        res.cookie('refreshToken', userData.refreshToken, { maxAge: 60 * 1000, httpOnly: true });
       }
       res.json(userData);
     } catch (error) {
@@ -52,14 +52,12 @@ class UserController {
 
   async getAllUsers(req: Request, res: Response) {
     const token = req.headers.authorization;
-    const user = tokenService.validateAccessToken(token!) as any;
-
+    const currentUser = tokenService.validateAccessToken(token!) as any;
     try {
-      const allUsers = await User.find({ _id: { $ne: user._id } });
-
+      const allUsers = await User.find({ _id: { $ne: currentUser._id } });
       const userListWithChatsId = await Promise.all(
         allUsers.map(async (user) => {
-          const chat = await Chat.findOne({ members: [user._id, user._id].sort() });
+          const chat = await Chat.findOne({ members: [user._id, currentUser._id].sort() });
           return { id: user._id, fullName: user.fullName, avatar: user.avatar, chatId: chat ? chat._id : '' };
         })
       );
@@ -72,8 +70,12 @@ class UserController {
   async refresh(req: Request, res: Response, next: NextFunction) {
     try {
       const { refreshToken } = req.cookies;
+      console.log('refresh token', refreshToken);
+
       const userData = await userService.refresh(refreshToken);
-      res.cookie('refreshToken', userData.refreshToken, { maxAge: 30 * 24 * 60 * 60 * 1000, httpOnly: true });
+      console.log('new refresh token', userData.refreshToken);
+
+      res.cookie('refreshToken', userData.refreshToken, { maxAge: 60 * 1000, httpOnly: true });
       return res.json(userData);
     } catch (error) {
       console.log(error);

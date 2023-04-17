@@ -34,7 +34,7 @@ import { IChat, IMessage } from '../types';
 class ChatService {
   createChat = async (from: string, to: string) => {
     try {
-      const newChat = await Chat.create({ members: [from, to] });
+      const newChat = await Chat.create({ members: [from, to].sort() });
       return newChat;
     } catch (error) {
       console.log(error);

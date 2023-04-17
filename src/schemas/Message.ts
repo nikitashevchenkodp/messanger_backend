@@ -6,10 +6,6 @@ const MessageSchema = new Schema<IMessage>(
     text: {
       type: String,
     },
-    createdAt: {
-      type: Date,
-      default: new Date(),
-    },
     from: {
       type: mongoose.Schema.Types.ObjectId,
     },
