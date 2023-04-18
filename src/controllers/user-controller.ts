@@ -9,7 +9,7 @@ import tokenService from '../services/token-service';
 const cockieSetup = {
   maxAge: 30 * 24 * 60 * 60 * 1000,
   httpOnly: true,
-  domain: process.env.NODE_ENV === 'production' ? process.env.PROD_DOMAIN : process.env.DEV_DOMAIN,
+  // domain: process.env.NODE_ENV === 'production' ? process.env.PROD_DOMAIN : process.env.DEV_DOMAIN,
   secure: true,
   sameSite: 'none',
 } as CookieOptions;
