@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "concurrently \"npx tsc --watch\" \"nodemon -q ./build/index.js\"",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "npx tsc",
+    "build": "NODE_ENV=production npx tsc",
     "start": "node ./build/index.js"
   },
   "keywords": [],

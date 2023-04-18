@@ -1,10 +1,18 @@
-import express, { NextFunction, Request, Response } from 'express';
+import express, { CookieOptions, NextFunction, Request, Response } from 'express';
 import Chat from '../schemas/Chat';
 import User from '../schemas/User';
 import Message from '../schemas/Message';
 import { userService } from '../services/user-service';
 import { nextTick } from 'process';
 import tokenService from '../services/token-service';
+
+const cockieSetup = {
+  maxAge: 30 * 24 * 60 * 60 * 1000,
+  httpOnly: true,
+  domain: process.env.NODE_ENV === 'production' ? process.env.PROD_DOMAIN : process.env.DEV_DOMAIN,
+  sameSite: 'none',
+  secure: true,
+} as CookieOptions;
 
 class UserController {
   async registration(req: Request, res: Response) {
@@ -19,7 +27,7 @@ class UserController {
     try {
       const { email, password } = req.body;
       const userData = await userService.login(email, password);
-      res.cookie('refreshToken', userData.refreshToken, { maxAge: 30 * 24 * 60 * 60 * 1000, httpOnly: true });
+      res.cookie('refreshToken', userData.refreshToken, cockieSetup);
       return res.json(userData);
     } catch (error) {
       next(error);
@@ -42,7 +50,7 @@ class UserController {
 
       const userData = await userService.createUser(email, password, nickname, fullName);
       if ('refreshToken' in userData) {
-        res.cookie('refreshToken', userData.refreshToken, { maxAge: 30 * 24 * 60 * 60 * 1000, httpOnly: true });
+        res.cookie('refreshToken', userData.refreshToken, cockieSetup);
       }
       res.json(userData);
     } catch (error) {
@@ -81,7 +89,7 @@ class UserController {
       const userData = await userService.refresh(refreshToken);
       console.log('new refresh token', userData.refreshToken);
 
-      res.cookie('refreshToken', userData.refreshToken, { maxAge: 30 * 24 * 60 * 60 * 1000, httpOnly: true });
+      res.cookie('refreshToken', userData.refreshToken, cockieSetup);
       return res.json(userData);
     } catch (error) {
       console.log(error);
