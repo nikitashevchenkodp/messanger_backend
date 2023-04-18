@@ -32,6 +32,7 @@ export interface IUser {
   password: string;
   avatar: string;
   nickname: string;
+  lastTimeOnline: number;
 }
 
 export interface IMessageFromClient {

@@ -20,6 +20,10 @@ const UserSchema = new Schema<IUser>({
     type: String,
     defalt: '',
   },
+  lastTimeOnline: {
+    type: Number,
+    default: 0,
+  },
 });
 
 export default mongoose.model('User', UserSchema);

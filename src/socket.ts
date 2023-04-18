@@ -6,6 +6,7 @@ import { chatService } from './services/chat-service';
 import { messageService } from './services/message-service';
 import { IChat } from './types';
 import * as events from './events';
+import { userService } from './services/user-service';
 
 export class ServerSocket {
   public static instance: ServerSocket;
@@ -55,8 +56,9 @@ export class ServerSocket {
         socket.join(roomName);
       });
     }
-    const onlineUsers = Array.from(new Set(Object.values(this.users)));
-    this.io.emit(events.ONLINE_USERS, onlineUsers);
+    const onlineUsers = Array.from(new Set(Object.values(this.users))).filter((id) => id !== userId);
+    this.io.to(socket.id).emit(events.ONLINE_USERS, onlineUsers);
+    this.io.except(socket.id).emit('NEW_USER_CONNECTED', { userId });
   };
 
   messageRecieved = async (message: any, socket: Socket) => {
@@ -114,12 +116,22 @@ export class ServerSocket {
     });
   };
 
-  disconnect = (socket: Socket) => {
+  disconnect = async (socket: Socket) => {
     console.log('------------------------------------');
     console.info('Disconnect received from: ' + socket.id);
     console.log('------------------------------------');
+    const userId = this.users[socket.id];
     delete this.users[socket.id];
-    const onlineUsers = Array.from(new Set(Object.values(this.users)));
-    this.io.emit(events.ONLINE_USERS, onlineUsers);
+    const dissconnectFromAllDevices = !Boolean(Object.values(this.users).find((id) => id === userId));
+    if (dissconnectFromAllDevices) {
+      const user = await User.findById(userId);
+      if (user) {
+        console.log('pver las time', user.lastTimeOnline);
+      }
+      const { lastTimeOnline } = await userService.setLastOnlineTime(userId);
+      console.log('current last time', lastTimeOnline);
+
+      this.io.emit('USER_DISCONNECTED', { userId, lastTimeOnline });
+    }
   };
 }

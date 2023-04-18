@@ -58,7 +58,13 @@ class UserController {
       const userListWithChatsId = await Promise.all(
         allUsers.map(async (user) => {
           const chat = await Chat.findOne({ members: [user._id, currentUser._id].sort() });
-          return { id: user._id, fullName: user.fullName, avatar: user.avatar, chatId: chat ? chat._id : '' };
+          return {
+            id: user._id,
+            fullName: user.fullName,
+            avatar: user.avatar,
+            chatId: chat ? chat._id : '',
+            lastTimeOnline: user.lastTimeOnline,
+          };
         })
       );
       return res.status(200).json(userListWithChatsId);

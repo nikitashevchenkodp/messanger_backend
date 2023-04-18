@@ -61,6 +61,11 @@ class UserService {
     return { ...tokens, user: userDto };
   }
 
+  setLastOnlineTime = async (userId: string) => {
+    const user = await User.findByIdAndUpdate(userId, { lastTimeOnline: Date.now() }, { new: true });
+    return user!;
+  };
+
   deleteUser = async () => {};
 
   getUser = async () => {};
