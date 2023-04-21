@@ -1,13 +1,14 @@
+import Chat from '../schemas/Chat';
 import Message from '../schemas/Message';
 import { chatService } from './chat-service';
 
 class MessageService {
-  createMessage = async (from: string, to: string, text: string, chatId: string) => {
-    let chat;
-    if (!chatId) {
+  createMessage = async (from: string, to: string, text: string, chatId: string, internalChatId: string) => {
+    let chat = await Chat.findOne({ internalId: internalChatId });
+    if (!chat) {
       chat = await chatService.createChat(from, to);
     }
-    const newMessage = await Message.create({ from, to, text, chatId: chat ? chat._id : chatId });
+    const newMessage = await Message.create({ from, to, text, chatId, internalChatId });
     return newMessage;
   };
 
@@ -16,9 +17,9 @@ class MessageService {
       await Promise.all(
         ids.map(async (id) => {
           const deletedMessage = await Message.findByIdAndRemove(id);
-          const messagesInThisChat = await this.getMessagesByChatId(deletedMessage?.chatId?.toString()!);
+          const messagesInThisChat = await this.getMessagesByChatId(deletedMessage?.internalChatId!);
           if (messagesInThisChat && messagesInThisChat.length === 0) {
-            await chatService.deleteChat(deletedMessage?.chatId?.toString()!);
+            await chatService.deleteChat(deletedMessage?.internalChatId!);
           }
         })
       );
@@ -82,7 +83,7 @@ class MessageService {
 
   getMessagesByChatId = async (chatId: string) => {
     try {
-      const messages = await Message.find({ chatId });
+      const messages = await Message.find({ internalChatId: chatId });
       return messages;
     } catch (error) {
       console.log(error);

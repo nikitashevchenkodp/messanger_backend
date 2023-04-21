@@ -1,10 +1,8 @@
-import express, { Request, Response } from 'express';
-import Message from '../schemas/Message';
-import Chat from '../schemas/Chat';
-import User from '../schemas/User';
-import { IChat, IMessage, IMessageFromClient } from '../types';
+import { Request, Response } from 'express';
+
 import { messageService } from '../services/message-service';
 import { chatService } from '../services/chat-service';
+import tokenService from '../services/token-service';
 
 class MessageController {
   async sendMessage(req: Request, res: Response) {
@@ -28,8 +26,21 @@ class MessageController {
   getMessagesByChatId = async (req: Request, res: Response) => {
     try {
       const { chatId } = req.params;
-      const messages = await messageService.getMessagesByChatId(chatId!);
-      res.status(200).json(messages);
+      const token = req.headers.authorization;
+      const user = tokenService.validateAccessToken(token!) as any;
+      const interalChatId = chatService.transformToInternalChatId(chatId, user._id);
+      const messages = await messageService.getMessagesByChatId(interalChatId!);
+      console.log(user._id);
+
+      const result = messages?.map((msg) => {
+        if (msg.chatId.toString() === user._id) {
+          return { ...msg.toJSON(), chatId: chatId };
+        }
+        return msg;
+      });
+      console.log(result);
+
+      res.status(200).json(result);
     } catch (error) {}
   };
 }

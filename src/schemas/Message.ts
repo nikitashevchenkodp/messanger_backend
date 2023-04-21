@@ -6,6 +6,9 @@ const MessageSchema = new Schema<IMessage>(
     text: {
       type: String,
     },
+    internalChatId: {
+      type: String,
+    },
     from: {
       type: mongoose.Schema.Types.ObjectId,
     },

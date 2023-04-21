@@ -2,6 +2,7 @@ import { Types } from 'mongoose';
 
 export interface IMessage {
   _id: Types.ObjectId;
+  internalChatId: string;
   text: string;
   createdAt: Date;
   from: Types.ObjectId;
@@ -24,6 +25,7 @@ export interface IChat {
   members: Array<string>;
   messages: Array<IMessage>;
   lastMessage: IMessage;
+  internalId: string;
 }
 export interface IUser {
   _id: Types.ObjectId;

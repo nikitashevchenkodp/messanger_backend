@@ -33,24 +33,21 @@ import { IChat, IMessage } from '../types';
 
 class ChatService {
   createChat = async (user1: string, user2: string) => {
-    try {
-      const newChat = await Chat.create({ members: [user1, user2].sort() });
-      return newChat;
-    } catch (error) {
-      console.log(error);
-    }
+    const internalId = this.transformToInternalChatId(user1, user2);
+    const newChat = await Chat.create({ members: [user1, user2].sort(), internalId: internalId });
+    return newChat;
   };
 
   deleteChat = async (chatId: string) => {
     try {
-      const deletedChat = await Chat.findByIdAndDelete(chatId);
+      const deletedChat = await Chat.findByIdAndDelete({ internalId: chatId });
       return deletedChat;
     } catch (error) {
       console.log(error);
     }
   };
 
-  transformToInternalChatlId = (userId1: string, userId2: string) => {
+  transformToInternalChatId = (userId1: string, userId2: string) => {
     return [userId1, userId2].sort().join('&');
   };
 
@@ -59,7 +56,8 @@ class ChatService {
   toggleMuteStatus = async (chatId: string, newStatus: boolean) => {};
 
   getChat = async (userId: string, id: string) => {
-    const chat = await Chat.findById(id);
+    const internalId = this.transformToInternalChatId(userId, id);
+    const chat = await Chat.findById({ internalId: internalId });
     const friendId = chat?.members.find((member: any) => member._id.toString() !== userId);
     const partner = await User.findById(friendId);
     const res = {

@@ -31,7 +31,9 @@ export class ServerSocket {
     this.io.on(events.CONNECTION, this.StartListeners);
   }
 
-  getCurretUserId = (socket: Socket) => {};
+  getCurretUserId = (socket: Socket) => {
+    return this.users[socket.id];
+  };
 
   StartListeners = async (socket: Socket) => {
     await this.connect(socket);
@@ -54,7 +56,7 @@ export class ServerSocket {
     const chats = await chatService.getAllChats(userId);
     if (chats) {
       chats.forEach(async (chat: IChat) => {
-        const roomName = chat._id.valueOf() as string;
+        const roomName = chat.internalId;
         socket.join(roomName);
       });
     }
@@ -64,56 +66,114 @@ export class ServerSocket {
   };
 
   messageRecieved = async (message: any, socket: Socket) => {
-    console.log(message);
     const { from, to, text, chatId } = message;
-
-    const createdMessage = await messageService.createMessage(from, to, text, chatId);
-    const room = this.io.sockets.adapter.rooms.get(createdMessage.chatId.toString());
+    const currentUserId = this.getCurretUserId(socket);
+    const internalChatId = chatService.transformToInternalChatId(chatId, from);
+    const createdMessage = await messageService.createMessage(from, to, text, chatId, internalChatId);
+    const room = this.io.sockets.adapter.rooms.get(createdMessage.internalChatId);
+    const recieverSocketIds = Object.entries(this.users).filter((user) => user[1] === message.to);
+    const senderSocketId = socket.id;
+    const messageForSender = {
+      ...createdMessage.toJSON(),
+      chatId: to,
+    };
+    const messageForReciever = {
+      ...createdMessage.toJSON(),
+      chatId: from,
+    };
     if (!room) {
-      socket.join(createdMessage.chatId.toString());
-      const socketId = Object.entries(this.users).find((user) => user[1] === message.to)?.[0] || '';
-      this.io.to(socketId).emit(events.MESSAGE_FROM_NEW_CONTACT, createdMessage.chatId);
-      this.io.to(socket.id).emit(events.NEW_CHAT_CREATED, createdMessage.chatId);
+      socket.join(createdMessage.internalChatId);
+      recieverSocketIds.forEach((socketId) =>
+        this.io.to(socketId).emit(events.MESSAGE_FROM_NEW_CONTACT, createdMessage.chatId)
+      );
+      this.io.to(senderSocketId).emit(events.NEW_CHAT_CREATED, createdMessage.chatId);
     }
-    this.io.to(message.chatId).emit(events.RESPONSE_MESSAGE, createdMessage);
+
+    this.io.to(senderSocketId).emit(events.RESPONSE_MESSAGE, messageForSender);
+    recieverSocketIds.forEach((socketId) => this.io.to(socketId).emit(events.RESPONSE_MESSAGE, messageForReciever));
   };
 
   connectToRoom = async (chatId: string, socket: Socket) => {
-    socket.join(chatId);
+    const currentUserId = this.getCurretUserId(socket);
+    const internalId = chatService.transformToInternalChatId(chatId, currentUserId);
+    socket.join(internalId);
   };
 
   typing = (data: any, socket: Socket) => {
-    const userId = this.users[socket.id];
+    const currentUserId = this.getCurretUserId(socket);
     const { chatId, typing } = data;
-    this.io.to(chatId).emit(events.TYPING_EMIT, { userId, typing });
+    const internalId = chatService.transformToInternalChatId(chatId, currentUserId);
+    this.io.to(internalId).emit(events.TYPING_EMIT, { userId: currentUserId, typing });
   };
   deleteMessages = async (data: any, socket: Socket) => {
-    console.log(data);
-
+    const { chatId, messagesIds } = data;
+    const currentUserId = this.getCurretUserId(socket);
+    const internalId = chatService.transformToInternalChatId(chatId, currentUserId);
     await messageService.deleteMessages(data.messagesIds);
-    this.io.to(data.chatId).emit('messageDeleted', { chatId: data.chatId, messagesIds: data.messagesIds });
+
+    const recieverSocketIds = Object.entries(this.users).filter((user) => user[1] === chatId);
+    const senderSocketId = socket.id;
+
+    this.io.to(senderSocketId).emit('messageDeleted', { chatId: chatId, messagesIds: messagesIds });
+    recieverSocketIds.forEach((socketId) =>
+      this.io.to(socketId).emit('messageDeleted', { chatId: currentUserId, messagesIds: messagesIds })
+    );
   };
 
   editMessage = async (data: any, socket: Socket) => {
-    console.log('edit message server', data);
     const editedMessage = await messageService.editMessage(data.messageId, data.text);
-    console.log('edited message', editedMessage);
+    const currentUserId = this.getCurretUserId(socket);
+    const recieverSocketIds = Object.entries(this.users).filter((user) => user[1] === data.chatId);
+    const senderSocketId = socket.id;
 
-    this.io.to(editedMessage!.chatId.toString()).emit('messageEdited', { message: editedMessage });
+    this.io.to(senderSocketId).emit('messageEdited', { message: editedMessage });
+    recieverSocketIds.forEach((socketId) =>
+      this.io.to(socketId).emit('messageEdited', { message: { ...editedMessage?.toJSON(), chatId: currentUserId } })
+    );
   };
   addReaction = async (data: any, socket: Socket) => {
     const newReactions = await messageService.addReaction(data.messageId, data.reaction);
-    this.io.to(data.chatId).emit('reactionAdded', {
+    const currentUserId = this.getCurretUserId(socket);
+    const internalChatId = chatService.transformToInternalChatId(data.chatId, currentUserId);
+
+    const recieverSocketIds = Object.entries(this.users).filter((user) => user[1] === data.chatId);
+    const senderSocketId = socket.id;
+
+    recieverSocketIds.forEach((socketId) =>
+      this.io.to(socketId).emit('reactionAdded', {
+        chatId: currentUserId,
+        messageId: data.messageId,
+        reactions: newReactions,
+      })
+    );
+
+    this.io.to(senderSocketId).emit('reactionAdded', {
       chatId: data.chatId,
       messageId: data.messageId,
       reactions: newReactions,
     });
   };
   deleteReaction = async (data: any, socket: Socket) => {
-    const deletedReactionId = await messageService.deleteReaction(data.messageId, data.reactionId);
+    console.log('delete reaction');
 
-    this.io.to(data?.chatId).emit('reactionDeleted', {
-      chatId: data?.chatId,
+    const deletedReactionId = await messageService.deleteReaction(data.messageId, data.reactionId);
+    const currentUserId = this.getCurretUserId(socket);
+    const internalChatId = chatService.transformToInternalChatId(data.chatId, currentUserId);
+    console.log(deletedReactionId);
+
+    const recieverSocketIds = Object.entries(this.users).filter((user) => user[1] === data.chatId);
+    const senderSocketId = socket.id;
+
+    recieverSocketIds.forEach((socketId) =>
+      this.io.to(socketId).emit('reactionDeleted', {
+        chatId: currentUserId,
+        messageId: data.messageId,
+        reactionId: deletedReactionId,
+      })
+    );
+
+    this.io.to(senderSocketId).emit('reactionDeleted', {
+      chatId: data.chatId,
       messageId: data.messageId,
       reactionId: deletedReactionId,
     });
@@ -123,17 +183,11 @@ export class ServerSocket {
     console.log('------------------------------------');
     console.info('Disconnect received from: ' + socket.id);
     console.log('------------------------------------');
-    const userId = this.users[socket.id];
+    const userId = this.getCurretUserId(socket);
     delete this.users[socket.id];
     const dissconnectFromAllDevices = !Boolean(Object.values(this.users).find((id) => id === userId));
     if (dissconnectFromAllDevices) {
-      const user = await User.findById(userId);
-      if (user) {
-        console.log('pver las time', user.lastTimeOnline);
-      }
       const { lastTimeOnline } = await userService.setLastOnlineTime(userId);
-      console.log('current last time', lastTimeOnline);
-
       this.io.emit('USER_DISCONNECTED', { userId, lastTimeOnline });
     }
   };
