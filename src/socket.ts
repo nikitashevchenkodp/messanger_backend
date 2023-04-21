@@ -31,6 +31,8 @@ export class ServerSocket {
     this.io.on(events.CONNECTION, this.StartListeners);
   }
 
+  getCurretUserId = (socket: Socket) => {};
+
   StartListeners = async (socket: Socket) => {
     await this.connect(socket);
     socket.on(events.REQUEST_MESSAGE, (message) => this.messageRecieved(message, socket));
@@ -64,6 +66,7 @@ export class ServerSocket {
   messageRecieved = async (message: any, socket: Socket) => {
     console.log(message);
     const { from, to, text, chatId } = message;
+
     const createdMessage = await messageService.createMessage(from, to, text, chatId);
     const room = this.io.sockets.adapter.rooms.get(createdMessage.chatId.toString());
     if (!room) {

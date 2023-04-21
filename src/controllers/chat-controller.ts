@@ -18,18 +18,13 @@ class ChatsController {
         records!.map(async (chat) => {
           const friendId = chat.members.find((member: any) => member._id.toString() !== user._id);
           const partner = await User.findById(friendId);
-          const { _id } = chat;
           return {
-            chatId: _id.toString(),
-            user: {
-              fullName: partner?.fullName || '',
-              id: partner?._id || '',
-              avatar: partner?.avatar || '',
-            },
+            id: friendId,
+            title: partner?.fullName || '',
+            avatar: partner?.avatar || '',
           };
         })
       );
-
       return res.status(200).json(result);
     } catch (error) {}
   }

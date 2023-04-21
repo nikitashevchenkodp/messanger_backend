@@ -32,9 +32,9 @@ import { IChat, IMessage } from '../types';
 // export const chatService = new ChatService();
 
 class ChatService {
-  createChat = async (from: string, to: string) => {
+  createChat = async (user1: string, user2: string) => {
     try {
-      const newChat = await Chat.create({ members: [from, to].sort() });
+      const newChat = await Chat.create({ members: [user1, user2].sort() });
       return newChat;
     } catch (error) {
       console.log(error);
@@ -48,6 +48,10 @@ class ChatService {
     } catch (error) {
       console.log(error);
     }
+  };
+
+  transformToInternalChatlId = (userId1: string, userId2: string) => {
+    return [userId1, userId2].sort().join('&');
   };
 
   togglePinnedStatus = async (chatId: string, newStatus: boolean) => {};
