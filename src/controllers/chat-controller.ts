@@ -36,7 +36,9 @@ class ChatsController {
       const user = tokenService.validateAccessToken(token!) as any;
       const chatItem = await chatService.getChat(user?._id!, chatId);
       res.status(200).json(chatItem);
-    } catch (error) {}
+    } catch (error) {
+      console.log(error);
+    }
   }
 }
 

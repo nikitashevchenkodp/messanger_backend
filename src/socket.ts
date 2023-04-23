@@ -66,6 +66,8 @@ export class ServerSocket {
   };
 
   messageRecieved = async (message: any, socket: Socket) => {
+    console.log('message recieved');
+
     const { from, to, text, chatId } = message;
     const currentUserId = this.getCurretUserId(socket);
     const internalChatId = chatService.transformToInternalChatId(chatId, from);
@@ -83,12 +85,11 @@ export class ServerSocket {
     };
     if (!room) {
       socket.join(createdMessage.internalChatId);
-      recieverSocketIds.forEach((socketId) =>
-        this.io.to(socketId).emit(events.MESSAGE_FROM_NEW_CONTACT, createdMessage.chatId)
-      );
-      this.io.to(senderSocketId).emit(events.NEW_CHAT_CREATED, createdMessage.chatId);
+      // recieverSocketIds.forEach((socketId) =>
+      //   this.io.to(socketId).emit(events.MESSAGE_FROM_NEW_CONTACT, currentUserId)
+      // );
+      // this.io.to(senderSocketId).emit(events.NEW_CHAT_CREATED, createdMessage.chatId);
     }
-
     this.io.to(senderSocketId).emit(events.RESPONSE_MESSAGE, messageForSender);
     recieverSocketIds.forEach((socketId) => this.io.to(socketId).emit(events.RESPONSE_MESSAGE, messageForReciever));
   };

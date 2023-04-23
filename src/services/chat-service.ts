@@ -1,3 +1,4 @@
+import { v4 } from 'uuid';
 import Chat from '../schemas/Chat';
 import MessagesMap from '../schemas/MessagesMap';
 import User from '../schemas/User';
@@ -57,16 +58,13 @@ class ChatService {
 
   getChat = async (userId: string, id: string) => {
     const internalId = this.transformToInternalChatId(userId, id);
-    const chat = await Chat.findById({ internalId: internalId });
+    const chat = await Chat.findOne({ internalId: internalId });
     const friendId = chat?.members.find((member: any) => member._id.toString() !== userId);
     const partner = await User.findById(friendId);
     const res = {
-      chatId: id,
-      user: {
-        fullName: partner?.fullName || '',
-        id: partner?._id || '',
-        avatar: partner?.avatar || '',
-      },
+      id,
+      title: partner?.fullName || '',
+      avatar: partner?.avatar || '',
     };
     return res;
   };
