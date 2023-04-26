@@ -6,8 +6,7 @@ export interface IMessage {
   text: string;
   createdAt: Date;
   from: Types.ObjectId;
-  to: Types.ObjectId;
-  chatId: Types.ObjectId;
+  chatId: string;
   edited: boolean;
   reactions: {
     reaction: string;
@@ -21,11 +20,15 @@ export interface IMessage {
 
 export interface IChat {
   _id: Types.ObjectId;
-  chatId: Types.ObjectId;
+  type: 'privat' | 'group' | 'channel';
   members: Array<string>;
   messages: Array<IMessage>;
   lastMessage: IMessage;
   internalId: string;
+  owner?: Types.ObjectId;
+  title?: string;
+  membersCount?: number;
+  avatar?: string;
 }
 export interface IUser {
   _id: Types.ObjectId;

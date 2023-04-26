@@ -12,11 +12,8 @@ const MessageSchema = new Schema<IMessage>(
     from: {
       type: mongoose.Schema.Types.ObjectId,
     },
-    to: {
-      type: mongoose.Schema.Types.ObjectId,
-    },
     chatId: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: String,
     },
     edited: {
       type: Boolean,

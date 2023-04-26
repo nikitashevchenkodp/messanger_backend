@@ -16,13 +16,26 @@ class ChatsController {
       const records = await chatService.getAllChats(user._id);
       const result = await Promise.all(
         records!.map(async (chat) => {
-          const friendId = chat.members.find((member: any) => member._id.toString() !== user._id);
-          const partner = await User.findById(friendId);
-          return {
-            id: friendId,
-            title: partner?.fullName || '',
-            avatar: partner?.avatar || '',
-          };
+          let record;
+          if (chat.type === 'privat') {
+            const friendId = chat.members.find((member: any) => member._id.toString() !== user._id);
+            const partner = await User.findById(friendId);
+            record = {
+              id: friendId,
+              title: partner?.fullName || '',
+              avatar: partner?.avatar || '',
+            };
+          } else if (chat.type === 'group') {
+            record = {
+              id: chat.id,
+              title: chat.title,
+              avatar: chat.avatar || '',
+              membersCount: chat.membersCount,
+              members: chat.members,
+              type: chat.type,
+            };
+          }
+          return record;
         })
       );
       return res.status(200).json(result);
@@ -36,6 +49,27 @@ class ChatsController {
       const user = tokenService.validateAccessToken(token!) as any;
       const chatItem = await chatService.getChat(user?._id!, chatId);
       res.status(200).json(chatItem);
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  async createGroupChat(req: Request, res: Response) {
+    try {
+      const { membersIds, title } = req.body;
+      const token = req.headers.authorization;
+      const user = tokenService.validateAccessToken(token!) as any;
+      const groupChat = await chatService.createGroupChat(user?._id!, membersIds, title);
+      res.status(201).json(groupChat);
+    } catch (error) {
+      console.log(error);
+    }
+  }
+  async addMembersToGroupChat(req: Request, res: Response) {
+    try {
+      const { chatId, membersIds } = req.body;
+      const updatedChat = await chatService.addParticipantsToGroupChat(chatId, membersIds);
+      res.status(201).json(updatedChat);
     } catch (error) {
       console.log(error);
     }

@@ -1,14 +1,23 @@
+import { isUserId } from '../helpers';
 import Chat from '../schemas/Chat';
 import Message from '../schemas/Message';
 import { chatService } from './chat-service';
 
 class MessageService {
-  createMessage = async (from: string, to: string, text: string, chatId: string, internalChatId: string) => {
-    let chat = await Chat.findOne({ internalId: internalChatId });
-    if (!chat) {
-      chat = await chatService.createChat(from, to);
+  createMessage = async (from: string, text: string, chatId: string, internalChatId?: string) => {
+    let isPrivatMessage = isUserId(chatId);
+    let newMessage;
+
+    if (isPrivatMessage) {
+      let chat = await Chat.findOne({ internalId: internalChatId });
+      if (!chat) {
+        chat = await chatService.createChat(from, chatId);
+      }
+      newMessage = await Message.create({ from, text, chatId, internalChatId });
+    } else {
+      newMessage = await Message.create({ from, text, chatId });
     }
-    const newMessage = await Message.create({ from, to, text, chatId, internalChatId });
+
     return newMessage;
   };
 
@@ -42,10 +51,8 @@ class MessageService {
       const userAlreadyMadeReaction = targetMessage?.reactions.find((reaction) => {
         return reaction.by.id.toString() === newReaction.by.id;
       });
-      console.log(userAlreadyMadeReaction);
 
       if (userAlreadyMadeReaction) {
-        console.log('user already made reaction');
         // delete old reactin
         const res = await Message.findByIdAndUpdate(
           messageId,
@@ -59,8 +66,6 @@ class MessageService {
         { $push: { reactions: newReaction } },
         { new: true }
       );
-      console.log(messageWithAddedReaction?.reactions[0]);
-      console.log(newReaction);
 
       return messageWithAddedReaction?.reactions;
     } catch (error) {
@@ -83,7 +88,13 @@ class MessageService {
 
   getMessagesByChatId = async (chatId: string) => {
     try {
-      const messages = await Message.find({ internalChatId: chatId });
+      let messages;
+      const isPrivatChat = isUserId(chatId);
+      if (isPrivatChat) {
+        messages = await Message.find({ internalChatId: chatId });
+      } else {
+        messages = await Message.find({ chatId: chatId });
+      }
       return messages;
     } catch (error) {
       console.log(error);

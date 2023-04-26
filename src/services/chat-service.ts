@@ -34,9 +34,38 @@ import { IChat, IMessage } from '../types';
 
 class ChatService {
   createChat = async (user1: string, user2: string) => {
+    console.log('create new chat');
+
     const internalId = this.transformToInternalChatId(user1, user2);
-    const newChat = await Chat.create({ members: [user1, user2].sort(), internalId: internalId });
+    const id = v4();
+    const newChat = await Chat.create({
+      _id: id,
+      members: [user1, user2].sort(),
+      internalId: internalId,
+      type: 'privat',
+    });
     return newChat;
+  };
+
+  createGroupChat = async (ownerId: string, members: string[], title: string) => {
+    const id = `-${v4()}`;
+    const newGroupChatorChannel = await Chat.create({
+      _id: id,
+      owner: ownerId,
+      members: [...members, ownerId],
+      title,
+      type: 'group',
+    });
+    return newGroupChatorChannel;
+  };
+
+  addParticipantsToGroupChat = async (chatId: string, newMembers: string[]) => {
+    const updatedChat = await Chat.findOneAndUpdate(
+      { _id: chatId },
+      { $push: { members: { $each: newMembers } }, $set: { membersCount: { $size: '$members' } } },
+      { new: true }
+    );
+    return updatedChat;
   };
 
   deleteChat = async (chatId: string) => {

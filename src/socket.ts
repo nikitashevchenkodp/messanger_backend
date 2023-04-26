@@ -7,6 +7,7 @@ import { messageService } from './services/message-service';
 import { IChat } from './types';
 import * as events from './events';
 import { userService } from './services/user-service';
+import { isUserId } from './helpers';
 
 export class ServerSocket {
   public static instance: ServerSocket;
@@ -56,7 +57,9 @@ export class ServerSocket {
     const chats = await chatService.getAllChats(userId);
     if (chats) {
       chats.forEach(async (chat: IChat) => {
-        const roomName = chat.internalId;
+        let roomName;
+        if (chat.type === 'privat') roomName = chat.internalId;
+        else roomName = chat._id.toString();
         socket.join(roomName);
       });
     }
@@ -66,32 +69,34 @@ export class ServerSocket {
   };
 
   messageRecieved = async (message: any, socket: Socket) => {
-    console.log('message recieved');
-
-    const { from, to, text, chatId } = message;
-    const currentUserId = this.getCurretUserId(socket);
-    const internalChatId = chatService.transformToInternalChatId(chatId, from);
-    const createdMessage = await messageService.createMessage(from, to, text, chatId, internalChatId);
-    const room = this.io.sockets.adapter.rooms.get(createdMessage.internalChatId);
-    const recieverSocketIds = Object.entries(this.users).filter((user) => user[1] === message.to);
-    const senderSocketId = socket.id;
-    const messageForSender = {
-      ...createdMessage.toJSON(),
-      chatId: to,
-    };
-    const messageForReciever = {
-      ...createdMessage.toJSON(),
-      chatId: from,
-    };
-    if (!room) {
-      socket.join(createdMessage.internalChatId);
-      // recieverSocketIds.forEach((socketId) =>
-      //   this.io.to(socketId).emit(events.MESSAGE_FROM_NEW_CONTACT, currentUserId)
-      // );
-      // this.io.to(senderSocketId).emit(events.NEW_CHAT_CREATED, createdMessage.chatId);
+    const { from, text, chatId } = message;
+    const isPrivatMessage = isUserId(chatId);
+    if (isPrivatMessage) {
+      const internalChatId = chatService.transformToInternalChatId(chatId, from);
+      const createdMessage = await messageService.createMessage(from, text, chatId, internalChatId);
+      const room = this.io.sockets.adapter.rooms.get(createdMessage.internalChatId);
+      const recieverSocketIds = Object.entries(this.users).filter((user) => user[1] === message.chatId);
+      const senderSocketId = socket.id;
+      const messageForSender = {
+        ...createdMessage.toJSON(),
+      };
+      const messageForReciever = {
+        ...createdMessage.toJSON(),
+        chatId: from,
+      };
+      if (!room) {
+        socket.join(createdMessage.internalChatId);
+      }
+      this.io.to(senderSocketId).emit(events.RESPONSE_MESSAGE, messageForSender);
+      recieverSocketIds.forEach((socketId) => this.io.to(socketId).emit(events.RESPONSE_MESSAGE, messageForReciever));
+    } else {
+      const createdMessage = await messageService.createMessage(from, text, chatId);
+      const room = this.io.sockets.adapter.rooms.get(chatId);
+      if (!room) {
+        socket.join(createdMessage.chatId.toString());
+      }
+      this.io.to(chatId).emit(events.RESPONSE_MESSAGE, createdMessage);
     }
-    this.io.to(senderSocketId).emit(events.RESPONSE_MESSAGE, messageForSender);
-    recieverSocketIds.forEach((socketId) => this.io.to(socketId).emit(events.RESPONSE_MESSAGE, messageForReciever));
   };
 
   connectToRoom = async (chatId: string, socket: Socket) => {
