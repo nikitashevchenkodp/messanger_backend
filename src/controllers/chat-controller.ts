@@ -24,6 +24,8 @@ class ChatsController {
               id: friendId,
               title: partner?.fullName || '',
               avatar: partner?.avatar || '',
+              type: chat.type,
+              members: chat.members,
             };
           } else if (chat.type === 'group') {
             record = {

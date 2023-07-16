@@ -12,10 +12,10 @@ mongoose.set('strictQuery', false);
 
 const app: Express = express();
 const port = parseInt(process.env.PORT!);
-const IP = parseInt(process.env.IP!);
+const IP = parseInt(process.env.IP!).toString();
 app.use(
   cors({
-    origin: ['http://localhost:3000', 'https://beamish-custard-7ad3ca.netlify.app'],
+    origin: ['http://localhost:3000', 'http://192.168.0.10:3000', 'https://beamish-custard-7ad3ca.netlify.app'],
     credentials: true,
   })
 );

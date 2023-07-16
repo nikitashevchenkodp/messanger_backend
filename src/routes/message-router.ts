@@ -3,8 +3,7 @@ import { messageController } from '../controllers/message-controller';
 
 const messageRouter = Router();
 
-// messageRouter.get('/chats/:chatId', messageController.getMessagesFromChat);
 messageRouter.get('/:chatId', messageController.getMessagesByChatId);
-// messageRouter.post('/send', messageController.sendMessage);
+messageRouter.get('/', messageController.getAllUserMessagesByChatIds);
 
 export default messageRouter;

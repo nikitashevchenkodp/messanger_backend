@@ -8,6 +8,9 @@ export interface IMessage {
   from: Types.ObjectId;
   chatId: string;
   edited: boolean;
+  content: {
+    text: string;
+  };
   reactions: {
     reaction: string;
     by: {

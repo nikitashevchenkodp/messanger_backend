@@ -1,7 +1,5 @@
 import { Server as HttpServer } from 'http';
 import { Socket, Server } from 'socket.io';
-import Chat from './schemas/Chat';
-import User from './schemas/User';
 import { chatService } from './services/chat-service';
 import { messageService } from './services/message-service';
 import { IChat } from './types';
@@ -38,7 +36,7 @@ export class ServerSocket {
 
   StartListeners = async (socket: Socket) => {
     await this.connect(socket);
-    socket.on(events.REQUEST_MESSAGE, (message) => this.messageRecieved(message, socket));
+    socket.on(events.REQUEST_MESSAGE, (message, cb) => this.messageRecieved(message, socket, cb));
     socket.on(events.TYPING_ON, (data) => this.typing(data, socket));
     socket.on(events.DISCONECTED, () => this.disconnect(socket));
     socket.on('deleteMessage', (data) => this.deleteMessages(data, socket));
@@ -64,39 +62,58 @@ export class ServerSocket {
       });
     }
     const onlineUsers = Array.from(new Set(Object.values(this.users))).filter((id) => id !== userId);
+
     this.io.to(socket.id).emit(events.ONLINE_USERS, onlineUsers);
-    this.io.except(socket.id).emit('NEW_USER_CONNECTED', { userId });
+    this.io.except(socket.id).emit('newUserConnected', { userId });
   };
 
-  messageRecieved = async (message: any, socket: Socket) => {
-    const { from, text, chatId } = message;
+  messageRecieved = async (message: any, socket: Socket, cb?: (...args: any[]) => void) => {
+    const { from, content, chatId } = message;
     const isPrivatMessage = isUserId(chatId);
-    if (isPrivatMessage) {
-      const internalChatId = chatService.transformToInternalChatId(chatId, from);
-      const createdMessage = await messageService.createMessage(from, text, chatId, internalChatId);
-      const room = this.io.sockets.adapter.rooms.get(createdMessage.internalChatId);
-      const recieverSocketIds = Object.entries(this.users).filter((user) => user[1] === message.chatId);
-      const senderSocketId = socket.id;
-      const messageForSender = {
-        ...createdMessage.toJSON(),
-      };
-      const messageForReciever = {
-        ...createdMessage.toJSON(),
-        chatId: from,
-      };
-      if (!room) {
-        socket.join(createdMessage.internalChatId);
+
+    try {
+      if (isPrivatMessage) {
+        console.log('is privat');
+        console.log('message', message);
+
+        const internalChatId = chatService.transformToInternalChatId(chatId, from.id);
+        const createdMessage = await messageService.createMessage(from, content, chatId, internalChatId);
+        const room = this.io.sockets.adapter.rooms.get(createdMessage.internalChatId);
+        const recieverSocketIds = Object.entries(this.users).filter((user) => user[1] === message.chatId);
+        const senderSocketId = socket.id;
+        const messageForSender = createdMessage.toJSON();
+        const messageForReciever = {
+          id: createdMessage.toJSON()._id,
+          ...createdMessage.toJSON(),
+          chatId: from.id,
+        };
+        console.log(messageForReciever);
+
+        if (!room) {
+          socket.join(createdMessage.internalChatId);
+        }
+        console.log('recieverSocketIds', recieverSocketIds);
+        console.log('senderSocketId', senderSocketId);
+        this.io.to(senderSocketId).emit(events.RESPONSE_MESSAGE, { ...messageForSender, id: messageForSender._id });
+        recieverSocketIds.forEach((socketId) =>
+          this.io.to(socketId[0]).emit(events.RESPONSE_MESSAGE, messageForReciever)
+        );
+      } else {
+        console.log('no privat');
+
+        const createdMessage = await messageService.createMessage(from.id, content, chatId);
+        console.log('createdMessage', createdMessage);
+
+        const room = this.io.sockets.adapter.rooms.get(chatId);
+        if (!room) {
+          socket.join(createdMessage.chatId.toString());
+        }
+        this.io
+          .to(chatId)
+          .emit(events.RESPONSE_MESSAGE, { ...createdMessage.toJSON(), id: createdMessage.toJSON()._id });
       }
-      this.io.to(senderSocketId).emit(events.RESPONSE_MESSAGE, messageForSender);
-      recieverSocketIds.forEach((socketId) => this.io.to(socketId).emit(events.RESPONSE_MESSAGE, messageForReciever));
-    } else {
-      const createdMessage = await messageService.createMessage(from, text, chatId);
-      const room = this.io.sockets.adapter.rooms.get(chatId);
-      if (!room) {
-        socket.join(createdMessage.chatId.toString());
-      }
-      this.io.to(chatId).emit(events.RESPONSE_MESSAGE, createdMessage);
-    }
+      cb?.();
+    } catch (error) {}
   };
 
   connectToRoom = async (chatId: string, socket: Socket) => {
@@ -194,7 +211,7 @@ export class ServerSocket {
     const dissconnectFromAllDevices = !Boolean(Object.values(this.users).find((id) => id === userId));
     if (dissconnectFromAllDevices) {
       const { lastTimeOnline } = await userService.setLastOnlineTime(userId);
-      this.io.emit('USER_DISCONNECTED', { userId, lastTimeOnline });
+      this.io.emit('userDisconnected', { userId, lastTimeOnline });
     }
   };
 }
