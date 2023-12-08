@@ -6,15 +6,11 @@ import { chatService } from './chat-service';
 
 class MessageService {
   createMessage = async (from: any, content: any, chatId: string, internalChatId?: string) => {
-    console.log(from);
-    console.log(internalChatId);
-
     let isPrivatMessage = isUserId(chatId);
     let newMessage;
 
     if (isPrivatMessage) {
       let chat = await Chat.findOne({ internalId: internalChatId });
-      console.log(chat);
 
       if (!chat) {
         chat = await chatService.createChat(from.id, chatId);
@@ -23,7 +19,6 @@ class MessageService {
     } else {
       newMessage = await Message.create({ from, content, chatId });
     }
-    console.log(newMessage);
 
     return newMessage;
   };

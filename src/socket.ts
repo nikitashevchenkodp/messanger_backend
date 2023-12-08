@@ -73,9 +73,6 @@ export class ServerSocket {
 
     try {
       if (isPrivatMessage) {
-        console.log('is privat');
-        console.log('message', message);
-
         const internalChatId = chatService.transformToInternalChatId(chatId, from.id);
         const createdMessage = await messageService.createMessage(from, content, chatId, internalChatId);
         const room = this.io.sockets.adapter.rooms.get(createdMessage.internalChatId);
@@ -87,22 +84,17 @@ export class ServerSocket {
           ...createdMessage.toJSON(),
           chatId: from.id,
         };
-        console.log(messageForReciever);
 
         if (!room) {
           socket.join(createdMessage.internalChatId);
         }
-        console.log('recieverSocketIds', recieverSocketIds);
-        console.log('senderSocketId', senderSocketId);
+
         this.io.to(senderSocketId).emit(events.RESPONSE_MESSAGE, { ...messageForSender, id: messageForSender._id });
         recieverSocketIds.forEach((socketId) =>
           this.io.to(socketId[0]).emit(events.RESPONSE_MESSAGE, messageForReciever)
         );
       } else {
-        console.log('no privat');
-
         const createdMessage = await messageService.createMessage(from.id, content, chatId);
-        console.log('createdMessage', createdMessage);
 
         const room = this.io.sockets.adapter.rooms.get(chatId);
         if (!room) {
@@ -177,12 +169,9 @@ export class ServerSocket {
     });
   };
   deleteReaction = async (data: any, socket: Socket) => {
-    console.log('delete reaction');
-
     const deletedReactionId = await messageService.deleteReaction(data.messageId, data.reactionId);
     const currentUserId = this.getCurretUserId(socket);
     const internalChatId = chatService.transformToInternalChatId(data.chatId, currentUserId);
-    console.log(deletedReactionId);
 
     const recieverSocketIds = Object.entries(this.users).filter((user) => user[1] === data.chatId);
     const senderSocketId = socket.id;

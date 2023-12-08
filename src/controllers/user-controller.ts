@@ -24,7 +24,6 @@ class UserController {
     try {
       const { email, password } = req.body;
       const userData = await userService.login(email, password);
-      console.log(userData);
 
       res.cookie('refreshToken', userData.refreshToken, cockieSetup);
       return res.json(userData);
@@ -83,7 +82,6 @@ class UserController {
   async refresh(req: Request, res: Response, next: NextFunction) {
     try {
       const { refreshToken } = req.cookies;
-      console.log(refreshToken);
 
       const userData = await userService.refresh(refreshToken);
       res.cookie('refreshToken', userData.refreshToken, cockieSetup);
