@@ -13,6 +13,7 @@ class MessageController {
       const user = tokenService.validateAccessToken(token!) as any;
 
       let messages;
+
       if (isUserId(chatId)) {
         const interalChatId = chatService.transformToInternalChatId(chatId, user._id);
         messages = await messageService.getMessagesByChatId(interalChatId!);
@@ -22,15 +23,11 @@ class MessageController {
 
       const result = messages?.map((msg) => {
         const msgJson = msg.toJSON();
-        const message = {
-          ...msgJson,
-          from: { id: msgJson.from?.id ? msgJson.from.id : msgJson.from },
-        };
 
         if (msg.chatId.toString() === user._id) {
-          return { ...message, chatId: chatId, id: message._id };
+          return { ...msgJson, chatId: chatId, id: msgJson._id };
         }
-        return { ...message, id: message._id };
+        return { ...msgJson, id: msgJson._id };
       });
 
       return res.status(200).json(result);
@@ -46,7 +43,6 @@ class MessageController {
       const token = req.headers.authorization;
       const user = tokenService.validateAccessToken(token!) as any;
       const allUserChats = await chatService.getAllChats(user._id);
-      console.log(allUserChats);
 
       const allmessagesByChatId = await Promise.all(
         allUserChats?.map(async (chat) => {

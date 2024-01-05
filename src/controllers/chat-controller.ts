@@ -2,7 +2,6 @@ import express, { Request, Response } from 'express';
 import Chat from '../schemas/Chat';
 import User from '../schemas/User';
 import Message from '../schemas/Message';
-import MessagesMap from '../schemas/MessagesMap';
 import { chatService } from '../services/chat-service';
 import tokenService from '../services/token-service';
 

@@ -1,11 +1,14 @@
-import { log } from 'console';
+import MessageDto, { PrivatMessageDto } from '../dtos/message-dto';
 import { isUserId } from '../helpers';
 import Chat from '../schemas/Chat';
-import Message from '../schemas/Message';
+import Message, { IMessageSchema, MessageFromClient } from '../schemas/Message';
 import { chatService } from './chat-service';
 
 class MessageService {
-  createMessage = async (from: any, content: any, chatId: string, internalChatId?: string) => {
+  createMessage = async (msgFromclient: MessageFromClient) => {
+    const { chatId, content, from } = msgFromclient;
+    const internalChatId = chatService.transformToInternalChatId(chatId, from.id);
+
     let isPrivatMessage = isUserId(chatId);
     let newMessage;
 
@@ -17,11 +20,15 @@ class MessageService {
       }
       newMessage = await Message.create({ from, content, chatId, internalChatId });
     } else {
+      // If group message, we dont need internalChat id, because it is the same for all paticipants
       newMessage = await Message.create({ from, content, chatId });
     }
-
     return newMessage;
   };
+
+  transformMessageForReceiver(message: PrivatMessageDto<IMessageSchema>): PrivatMessageDto<IMessageSchema> {
+    return { ...message, chatId: message.from.id };
+  }
 
   deleteMessages = async (ids: string[]) => {
     try {
@@ -50,7 +57,7 @@ class MessageService {
     try {
       let messageWithAddedReaction;
       const targetMessage = await Message.findById(messageId);
-      const userAlreadyMadeReaction = targetMessage?.reactions.find((reaction) => {
+      const userAlreadyMadeReaction = targetMessage?.reactions?.find((reaction) => {
         return reaction.by.id.toString() === newReaction.by.id;
       });
 

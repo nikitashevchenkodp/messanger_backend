@@ -6,6 +6,8 @@ import { IChat } from './types';
 import * as events from './events';
 import { userService } from './services/user-service';
 import { isUserId } from './helpers';
+import { MessageFromClient } from './schemas/Message';
+import MessageDto, { PrivatMessageDto } from './dtos/message-dto';
 
 export class ServerSocket {
   public static instance: ServerSocket;
@@ -36,7 +38,7 @@ export class ServerSocket {
 
   StartListeners = async (socket: Socket) => {
     await this.connect(socket);
-    socket.on(events.REQUEST_MESSAGE, (message, cb) => this.messageRecieved(message, socket, cb));
+    socket.on(events.REQUEST_MESSAGE, (message) => this.messageRecieved(message, socket));
     socket.on(events.TYPING_ON, (data) => this.typing(data, socket));
     socket.on(events.DISCONECTED, () => this.disconnect(socket));
     socket.on('deleteMessage', (data) => this.deleteMessages(data, socket));
@@ -50,6 +52,7 @@ export class ServerSocket {
     console.log('------------------------------------');
     console.info('Connect received from: ' + socket.id);
     console.log('------------------------------------');
+
     const userId = socket.handshake.query.id as string;
     this.users[socket.id] = userId;
     const chats = await chatService.getAllChats(userId);
@@ -67,44 +70,46 @@ export class ServerSocket {
     this.io.except(socket.id).emit('newUserConnected', { userId });
   };
 
-  messageRecieved = async (message: any, socket: Socket, cb?: (...args: any[]) => void) => {
-    const { from, content, chatId } = message;
+  messageRecieved = async (message: MessageFromClient, socket: Socket) => {
+    const { chatId } = message;
     const isPrivatMessage = isUserId(chatId);
 
     try {
       if (isPrivatMessage) {
-        const internalChatId = chatService.transformToInternalChatId(chatId, from.id);
-        const createdMessage = await messageService.createMessage(from, content, chatId, internalChatId);
-        const room = this.io.sockets.adapter.rooms.get(createdMessage.internalChatId);
+        const createdMessage = await messageService.createMessage(message);
+        const toPrivatMessage = new PrivatMessageDto(createdMessage);
+
+        const room = this.io.sockets.adapter.rooms.get(toPrivatMessage.internalChatId);
+
         const recieverSocketIds = Object.entries(this.users).filter((user) => user[1] === message.chatId);
         const senderSocketId = socket.id;
-        const messageForSender = createdMessage.toJSON();
-        const messageForReciever = {
-          id: createdMessage.toJSON()._id,
-          ...createdMessage.toJSON(),
-          chatId: from.id,
-        };
+
+        const messageForSender = toPrivatMessage;
+        const messageForReciever = messageService.transformMessageForReceiver(toPrivatMessage);
 
         if (!room) {
           socket.join(createdMessage.internalChatId);
         }
 
-        this.io.to(senderSocketId).emit(events.RESPONSE_MESSAGE, { ...messageForSender, id: messageForSender._id });
+        this.io.to(senderSocketId).emit(events.RESPONSE_MESSAGE, messageForSender);
+
         recieverSocketIds.forEach((socketId) =>
           this.io.to(socketId[0]).emit(events.RESPONSE_MESSAGE, messageForReciever)
         );
       } else {
-        const createdMessage = await messageService.createMessage(from.id, content, chatId);
+        const createdMessage = await messageService.createMessage(message);
+        const groupMessage = new MessageDto(createdMessage);
 
         const room = this.io.sockets.adapter.rooms.get(chatId);
+
         if (!room) {
-          socket.join(createdMessage.chatId.toString());
+          socket.join(groupMessage.chatId);
         }
+
         this.io
           .to(chatId)
           .emit(events.RESPONSE_MESSAGE, { ...createdMessage.toJSON(), id: createdMessage.toJSON()._id });
       }
-      cb?.();
     } catch (error) {}
   };
 
@@ -120,6 +125,7 @@ export class ServerSocket {
     const internalId = chatService.transformToInternalChatId(chatId, currentUserId);
     this.io.to(internalId).emit(events.TYPING_EMIT, { userId: currentUserId, typing });
   };
+
   deleteMessages = async (data: any, socket: Socket) => {
     const { chatId, messagesIds } = data;
     const currentUserId = this.getCurretUserId(socket);

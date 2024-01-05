@@ -1,4 +1,4 @@
-import { Types } from 'mongoose';
+import mongoose, { Types } from 'mongoose';
 
 export interface IMessage {
   _id: Types.ObjectId;
@@ -32,6 +32,7 @@ export interface IChat {
   title?: string;
   membersCount?: number;
   avatar?: string;
+  folders: Array<mongoose.Schema.Types.ObjectId>;
 }
 export interface IUser {
   _id: Types.ObjectId;

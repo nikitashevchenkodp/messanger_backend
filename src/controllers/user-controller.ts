@@ -1,9 +1,7 @@
-import express, { CookieOptions, NextFunction, Request, Response } from 'express';
+import { CookieOptions, NextFunction, Request, Response } from 'express';
 import Chat from '../schemas/Chat';
 import User from '../schemas/User';
-import Message from '../schemas/Message';
 import { userService } from '../services/user-service';
-import { nextTick } from 'process';
 import tokenService from '../services/token-service';
 
 const cockieSetup = {
@@ -23,6 +21,7 @@ class UserController {
   async login(req: Request, res: Response, next: NextFunction) {
     try {
       const { email, password } = req.body;
+
       const userData = await userService.login(email, password);
 
       res.cookie('refreshToken', userData.refreshToken, cockieSetup);

@@ -4,10 +4,10 @@ import cors from 'cors';
 import mongoose from 'mongoose';
 import { chatsRouter, messageRouter, userRouter } from './routes';
 import { ServerSocket } from './socket';
-import Chat from './schemas/Chat';
 import { errorMiddleware } from './middlewares/error-middleware';
 import authMiddleware from './middlewares/auth-middleware';
 import cookieParser from 'cookie-parser';
+import foldersRouter from './routes/folders-route';
 mongoose.set('strictQuery', false);
 
 const app: Express = express();
@@ -24,6 +24,7 @@ app.use(cookieParser());
 app.use('/api/users', userRouter);
 app.use('/api/chats', authMiddleware, chatsRouter);
 app.use('/api/messages', authMiddleware, messageRouter);
+app.use('/api/folders', authMiddleware, foldersRouter);
 app.use(errorMiddleware);
 
 const connection = async () => {
